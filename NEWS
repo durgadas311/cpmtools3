@@ -1,0 +1,4 @@
+Changes since 2.22:
+
+o  Use 16 bit block pointers for file systems > 256 blocks, not >= 256
+o  Translate CP/M file name character '/' to ',' for the host and back
