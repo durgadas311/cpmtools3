@@ -40,18 +40,21 @@ static int onlyuser0(char **const dirent, int entries) {
 /*
  * olddir  -- old style output 
  */
-static void olddir(char **dirent, int entries) {
+static void olddir(struct cpmSuperBlock *sb, char **dirent, int entries) {
 	int i, j, k, l, user, announce, showuser, files;
+	int maxu = (sb->type & CPMFS_HAS_XFCBS ? 16 : 32);
 
 	showuser = !onlyuser0(dirent, entries);
 	files = 0;
-	for (user = 0; user < 32; ++user) {
+	for (user = 0; user < maxu; ++user) {
+		int u10 = '0' + user / 10;
+		int u1 = '0' + user % 10;
 		announce = 1;
 		for (i = l = 0; i < entries; ++i) {
 			/* This selects real regular files implicitly, because only those have
 			 * the user in their name.  ".", ".." and the password file do not.
 			 */
-			if (dirent[i][0] == '0' + user / 10 && dirent[i][1] == '0' + user % 10) {
+			if (dirent[i][0] == u10 && dirent[i][1] == u1) {
 				++files;
 				if (announce && showuser) {
 					printf("User %d\n", user);
@@ -97,10 +100,11 @@ static void olddir(char **dirent, int entries) {
 /*
  * oldddir -- old style long output 
  */
-static void oldddir(char **dirent, int entries, struct cpmInode *ino) {
+static void oldddir(struct cpmSuperBlock *sb, char **dirent, int entries, struct cpmInode *ino) {
 	struct cpmStatFS buf;
 	struct cpmStat statbuf;
 	struct cpmInode file;
+	int maxu = (sb->type & CPMFS_HAS_XFCBS ? 16 : 32);
 
 	if (entries > 2) {
 		int i, j, k, l, announce, user;
@@ -110,11 +114,13 @@ static void oldddir(char **dirent, int entries, struct cpmInode *ino) {
 		printf("     Name    Bytes   Recs  Attr     update             create\n");
 		printf("------------ ------ ------ ---- -----------------  -----------------\n");
 		announce = 0;
-		for (l = user = 0; user < 32; ++user) {
+		for (l = user = 0; user < maxu; ++user) {
+			int u10 = '0' + user / 10;
+			int u1 = '0' + user % 10;
 			for (i = 0; i < entries; ++i) {
 				struct tm *tmp;
 
-				if (dirent[i][0] == '0' + user / 10 && dirent[i][1] == '0' + user % 10) {
+				if (dirent[i][0] == u10 && dirent[i][1] == u1) {
 					if (announce == 1) {
 						printf("\nUser %d:\n\n", user);
 						printf("     Name    Bytes   Recs  Attr     update             create\n");
@@ -177,10 +183,11 @@ static void oldddir(char **dirent, int entries, struct cpmInode *ino) {
 /*
  * old3dir -- old CP/M Plus style long output 
  */
-static void old3dir(char **dirent, int entries, struct cpmInode *ino) {
+static void old3dir(struct cpmSuperBlock *sb, char **dirent, int entries, struct cpmInode *ino) {
 	struct cpmStatFS buf;
 	struct cpmStat statbuf;
 	struct cpmInode file;
+	int maxu = (sb->type & CPMFS_HAS_XFCBS ? 16 : 32);
 
 	if (entries > 2) {
 		int i, j, k, l, announce, user, attrib;
@@ -189,11 +196,13 @@ static void old3dir(char **dirent, int entries, struct cpmInode *ino) {
 		qsort(dirent, entries, sizeof(char *), namecmp);
 		cpmStatFS(ino, &buf);
 		announce = 1;
-		for (l = 0, user = 0; user < 32; ++user) {
+		for (l = 0, user = 0; user < maxu; ++user) {
+			int u10 = '0' + user / 10;
+			int u1 = '0' + user % 10;
 			for (i = 0; i < entries; ++i) {
 				struct tm *tmp;
 
-				if (dirent[i][0] == '0' + user / 10 && dirent[i][1] == '0' + user % 10) {
+				if (dirent[i][0] == u10 && dirent[i][1] == u1) {
 					cpmNamei(ino, dirent[i], &file);
 					cpmStat(&file, &statbuf);
 					cpmAttrGet(&file, &attrib);
@@ -282,21 +291,24 @@ static void old3dir(char **dirent, int entries, struct cpmInode *ino) {
 /*
  * ls -- UNIX style output 
  */
-static void ls(char **dirent, int entries, struct cpmInode *ino, int l, int c, int iflag) {
+static void ls(struct cpmSuperBlock *sb, char **dirent, int entries, struct cpmInode *ino, int l, int c, int iflag) {
 	int i, user, announce, any;
 	time_t now;
 	struct cpmStat statbuf;
 	struct cpmInode file;
+	int maxu = (sb->type & CPMFS_HAS_XFCBS ? 16 : 32);
 
 	time(&now);
 	qsort(dirent, entries, sizeof(char *), namecmp);
 	announce = 0;
 	any = 0;
-	for (user = 0; user < 32; ++user) {
+	for (user = 0; user < maxu; ++user) {
+		int u10 = '0' + user / 10;
+		int u1 = '0' + user % 10;
 		announce = 0;
 		for (i = 0; i < entries; ++i) {
 			if (dirent[i][0] != '.') {
-				if (dirent[i][0] == '0' + user / 10 && dirent[i][1] == '0' + user % 10) {
+				if (dirent[i][0] == u10 && dirent[i][1] == u1) {
 					if (announce == 0) {
 						if (any) {
 							putchar('\n');
@@ -349,20 +361,24 @@ static void ls(char **dirent, int entries, struct cpmInode *ino, int l, int c, i
 /*
  * lsattr  -- output something like e2fs lsattr 
  */
-static void lsattr(char **dirent, int entries, struct cpmInode *ino) {
+static void lsattr(struct cpmSuperBlock *sb, char **dirent, int entries, struct cpmInode *ino) {
 	int i, user, announce, any;
 	struct cpmStat statbuf;
 	struct cpmInode file;
 	cpm_attr_t attrib;
+	int maxu = (sb->type & CPMFS_HAS_XFCBS ? 16 : 32);
 
 	qsort(dirent, entries, sizeof(char *), namecmp);
 	announce = 0;
 	any = 0;
-	for (user = 0; user < 32; ++user) {
+	/* TODO: don't show XFCBS... or augment w/XFCB data? */
+	for (user = 0; user < maxu; ++user) {
+		int u10 = '0' + user / 10;
+		int u1 = '0' + user % 10;
 		announce = 0;
 		for (i = 0; i < entries; ++i) {
 			if (dirent[i][0] != '.') {
-				if (dirent[i][0] == '0' + user / 10 && dirent[i][1] == '0' + user % 10) {
+				if (dirent[i][0] == u10 && dirent[i][1] == u1) {
 					if (announce == 0) {
 						if (any) {
 							putchar('\n');
@@ -481,15 +497,15 @@ int main(int argc, char *argv[]) {
 		cpmglob(0, 1, star, &root, &gargc, &gargv);
 	}
 	if (style == 1) {
-		olddir(gargv, gargc);
+		olddir(&super, gargv, gargc);
 	} else if (style == 2) {
-		oldddir(gargv, gargc, &root);
+		oldddir(&super, gargv, gargc, &root);
 	} else if (style == 3) {
-		old3dir(gargv, gargc, &root);
+		old3dir(&super, gargv, gargc, &root);
 	} else if (style == 5) {
-		lsattr(gargv, gargc, &root);
+		lsattr(&super, gargv, gargc, &root);
 	} else {
-		ls(gargv, gargc, &root, style == 4, changetime, inode);
+		ls(&super, gargv, gargc, &root, style == 4, changetime, inode);
 	}
 	cpmglobfree(gargv, gargc);
 	cpmUmount(&super);

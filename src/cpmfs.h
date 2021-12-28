@@ -65,6 +65,7 @@ struct cpmInode {
 	time_t mtime;
 	time_t ctime;
 	struct cpmSuperBlock *sb;
+	ino_t xfcb;
 };
 
 struct cpmFile {
@@ -98,10 +99,13 @@ struct cpmStat {
 #define CPMFS_CPM3_OTHER (0x1<<2) /* has passwords and disc label */
 #define CPMFS_DS_DATES   (0x1<<3) /* has datestamper timestamps   */
 #define CPMFS_EXACT_SIZE (0x1<<4) /* has reverse exact file size  */
+#define CPMFS_MPM_DATES  (0x1<<5) /* has MP/M style time stamps (XFCBs) */
+#define CPMFS_HAS_XFCBS  (0x1<<6) /* has XFCBs, not userno 16-31 */
 
 #define CPMFS_DR22  (CPMFS_HI_USER)
 #define CPMFS_P2DOS (CPMFS_CPM3_DATES|CPMFS_HI_USER)
-#define CPMFS_DR3   (CPMFS_CPM3_DATES|CPMFS_CPM3_OTHER|CPMFS_HI_USER)
+#define CPMFS_DR3   (CPMFS_CPM3_DATES|CPMFS_CPM3_OTHER|CPMFS_HI_USER|CPMFS_HAS_XFCBS)
+#define CPMFS_MPM   (CPMFS_MPM_DATES|CPMFS_CPM3_OTHER|CPMFS_HI_USER|CPMFS_HAS_XFCBS)
 #define CPMFS_ISX   (CPMFS_EXACT_SIZE)
 #define CPMFS_ZSYS  (CPMFS_HI_USER)
 
@@ -143,6 +147,7 @@ struct cpmSuperBlock {
 	int alvSize;
 	int *alv;
 	int cnotatime;
+	int cmakexfcbs;
 	char *label;
 	size_t labelLength;
 	char *passwd;
