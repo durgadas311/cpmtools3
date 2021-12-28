@@ -1212,13 +1212,6 @@ int cpmReadSuper(struct cpmSuperBlock *d, struct cpmInode *root, char const *for
 					fprintf(stderr, "getformat: %s\n", p);
 #endif
 					p[23] = '\n';
-					if (d->type & CPMFS_MPM_DATES) {
-/* TODO: must associate timestamps with actual file...
-						i->atime = cpm2unix_time(...);
-					(or)	i->ctime = cpm2unix_time(...);
-						i->mtime = cpm2unix_time(...);
- */
-					}
 				}
 			}
 		}
@@ -2079,7 +2072,7 @@ int cpmCreat(struct cpmInode *dir, char const *fname, struct cpmInode *ino, mode
 			if (xfcb == -1) {
 				return -1;
 			}
-			entx = dir->sb->dir + extent;
+			entx = dir->sb->dir + xfcb;
 			memset(entx, 0, 32);
 			entx->status = user + 16;
 			memcpy(entx->name, name, 8);
