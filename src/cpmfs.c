@@ -49,6 +49,25 @@ static mode_t s_ifdir = 1;
 static mode_t s_ifreg = 1;
 extern int autoReadSuper(struct cpmSuperBlock *d, char const *format);
 
+/* "inline" avoids the "defined but not used" warning */
+static inline void dumpDiskdef(struct cpmSuperBlock *d) {
+	printf("diskdef\n");
+	printf("  seclen %d\n", d->secLength);
+	printf("  tracks %d\n", d->tracks);
+	printf("  sectrk %d\n", d->sectrk);
+	printf("  blocksize %d\n", d->blksiz);
+	printf("  maxdir %d\n", d->maxdir);
+	printf("  dirblks %d\n", d->dirblks);
+	printf("  skew %d\n", d->skew);
+	printf("  boottrk %d\n", d->boottrk);
+	printf("  offset %ld\n", d->offset);
+	printf("  os %s\n", d->type == CPMFS_DR22 ? "2.2" :
+			d->type == CPMFS_DR3 ? "3" :
+			d->type == CPMFS_MPM ? "mpm" :
+			"?");
+	printf("end\n");
+}
+
 /*
  * memcpy7 -- Copy string, leaving 8th bit alone
  */
@@ -1109,6 +1128,7 @@ int cpmReadSuper(struct cpmSuperBlock *d, struct cpmInode *root, char const *for
 
 	d->uppercase = uppercase;
 
+	/* dumpDiskdef(d); */
 	assert(d->boottrk >= 0);
 	assert(d->secLength > 0);
 	assert(d->sectrk > 0);

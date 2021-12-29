@@ -42,17 +42,17 @@ extern "C" {
 #include "device.h"
 
 /* CP/M file attributes */
-#define CPM_ATTR_F1		1
-#define CPM_ATTR_F2		2
-#define CPM_ATTR_F3		4
-#define CPM_ATTR_F4		8
+#define CPM_ATTR_F1		000001
+#define CPM_ATTR_F2		000002
+#define CPM_ATTR_F3		000004
+#define CPM_ATTR_F4		000010
 /* F5-F8 are banned in CP/M 2 & 3, F7 is used by ZSDOS */
-#define CPM_ATTR_RO		256     /* Read-only */
-#define CPM_ATTR_SYS		512	/* System */
-#define CPM_ATTR_ARCV		1024	/* Archive */
-#define CPM_ATTR_PWDEL 		2048	/* Password required to delete */
-#define CPM_ATTR_PWWRITE	4096	/* Password required to write */
-#define CPM_ATTR_PWREAD		8192	/* Password required to read */
+#define CPM_ATTR_RO		000400	/* Read-only */
+#define CPM_ATTR_SYS		001000	/* System */
+#define CPM_ATTR_ARCV		002000	/* Archive */
+#define CPM_ATTR_PWDEL 		004000	/* Password required to delete */
+#define CPM_ATTR_PWWRITE	010000	/* Password required to write */
+#define CPM_ATTR_PWREAD		020000	/* Password required to read */
 
 typedef int cpm_attr_t;
 
