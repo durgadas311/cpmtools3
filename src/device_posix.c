@@ -54,7 +54,8 @@ const char *Device_readSector(const struct Device *this, int track, int sector, 
 	if (lseek(this->fd, (off_t)(((sector + track * this->sectrk)*this->secLength) + this->offset), SEEK_SET) == -1) {
 		return strerror(errno);
 	}
-	if ((res = read(this->fd, buf, this->secLength)) != this->secLength) {
+	res = read(this->fd, buf, this->secLength);
+	if (res != this->secLength) {
 		if (res == -1) {
 			return strerror(errno);
 		} else {

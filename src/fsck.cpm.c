@@ -49,12 +49,13 @@ static int bcdCheck(int n, int max, const char *msg, const char *unit, int exten
 /*
  * pwdCheck -- check password
  */
-static int pwdCheck(int extent, const char *pwd, char decode) {
+static int pwdCheck(int extent, const unsigned char *pwd, unsigned char decode) {
 	char c;
 	int i;
 
 	for (i = 0; i < 8; ++i) {
-		if ((c = ((char)(pwd[7 - i] ^ decode))) < ' ' || c & 0x80) {
+		c = pwd[7 - i] ^ decode;
+		if (c < ' ' || c & 0x80) {
 			printf("Error: non-printable character in password (extent=%d, password=", extent);
 			for (i = 0; i < 8; ++i) {
 				c = pwd[7 - i] ^ decode;
@@ -156,17 +157,18 @@ static int fsck(struct cpmInode *root, const char *image) {
 
 		dir = sb->dir + extent;
 		status = &dir->status;
-		if (*status <= (sb->type == CPMFS_P2DOS ? 31 : 15)) /* directory entry */ {
+		if (*status <= (sb->type == CPMFS_P2DOS ? 31 : 15)) { /* directory entry */
 			/* check name and extension */
 			int i;
-			char *c;
+			unsigned char *c;
 
 			for (i = 0; i < 8; ++i) {
 				c = &(dir->name[i]);
 				if (!ISFILECHAR(i, *c & 0x7f) || islower(*c & 0x7f)) {
-					printf("Error: Bad name (extent=%d, name=\"%s\", position=%d)\n", extent, prfile(sb, extent), i);
+					printf("Error: Bad name (extent=%d, name=\"%s\", position=%d)\n",
+						extent, prfile(sb, extent), i);
 					if (ask("Remove file")) {
-						*status = (char)0xE5;
+						*status = 0xE5;
 						ret |= MODIFIED;
 						break;
 					} else {
@@ -174,15 +176,16 @@ static int fsck(struct cpmInode *root, const char *image) {
 					}
 				}
 			}
-			if (*status == (char)0xe5) {
+			if (*status == 0xe5) {
 				continue;
 			}
 			for (i = 0; i < 3; ++i) {
 				c = &(dir->ext[i]);
 				if (!ISFILECHAR(1, *c & 0x7f) || islower(*c & 0x7f)) {
-					printf("Error: Bad name (extent=%d, name=\"%s\", position=%d)\n", extent, prfile(sb, extent), i);
+					printf("Error: Bad name (extent=%d, name=\"%s\", position=%d)\n",
+						extent, prfile(sb, extent), i);
 					if (ask("Remove file")) {
-						*status = (char)0xE5;
+						*status = 0xE5;
 						ret |= MODIFIED;
 						break;
 					} else {
@@ -196,9 +199,10 @@ static int fsck(struct cpmInode *root, const char *image) {
 
 			/* check extent number */
 			if ((dir->extnol & 0xff) > 0x1f) {
-				printf("Error: Bad lower bits of extent number (extent=%d, name=\"%s\", low bits=%d)\n", extent, prfile(sb, extent), dir->extnol & 0xff);
+				printf("Error: Bad lower bits of extent number (extent=%d, name=\"%s\", low bits=%d)\n",
+					extent, prfile(sb, extent), dir->extnol & 0xff);
 				if (ask("Remove file")) {
-					*status = (char)0xE5;
+					*status = 0xE5;
 					ret |= MODIFIED;
 				} else {
 					ret |= BROKEN;
@@ -208,9 +212,10 @@ static int fsck(struct cpmInode *root, const char *image) {
 				continue;
 			}
 			if ((dir->extnoh & 0xff) > 0x3f) {
-				printf("Error: Bad higher bits of extent number (extent=%d, name=\"%s\", high bits=%d)\n", extent, prfile(sb, extent), dir->extnoh & 0xff);
+				printf("Error: Bad higher bits of extent number (extent=%d, name=\"%s\", high bits=%d)\n",
+					extent, prfile(sb, extent), dir->extnoh & 0xff);
 				if (ask("Remove file")) {
-					*status = (char)0xE5;
+					*status = 0xE5;
 					ret |= MODIFIED;
 				} else {
 					ret |= BROKEN;
@@ -222,7 +227,8 @@ static int fsck(struct cpmInode *root, const char *image) {
 
 			/* check last record byte count */
 			if ((dir->lrc & 0xff) > 128) {
-				printf("Error: Bad last record byte count (extent=%d, name=\"%s\", lrc=%d)\n", extent, prfile(sb, extent), dir->lrc & 0xff);
+				printf("Error: Bad last record byte count (extent=%d, name=\"%s\", lrc=%d)\n",
+					extent, prfile(sb, extent), dir->lrc & 0xff);
 				if (ask("Clear last record byte count")) {
 					dir->lrc = (char)0;
 					ret |= MODIFIED;
@@ -235,39 +241,37 @@ static int fsck(struct cpmInode *root, const char *image) {
 			}
 
 			/* check block number range */
-			{
-				int block, min, max, i;
+			int block, min, max;
 
-				min = sb->dirblks;
-				max = sb->size;
-				for (i = 0; i < 16; ++i) {
-					block = dir->pointers[i];
-					if (sb->size > 256) {
-						block += (dir->pointers[++i] << 8);
-					}
-					if (block > 0) {
-						++usedBlocks;
-						if (block < min || block >= max) {
-							printf("Error: Bad block number (extent=%d, name=\"%s\", block=%d)\n", extent, prfile(sb, extent), block);
-							if (ask("Remove file")) {
-								*status = 0xE5;
-								ret |= MODIFIED;
-								break;
-							} else {
-								ret |= BROKEN;
-							}
+			min = sb->dirblks;
+			max = sb->size;
+			for (i = 0; i < 16; ++i) {
+				block = dir->pointers[i];
+				if (sb->size > 256) {
+					block += (dir->pointers[++i] << 8);
+				}
+				if (block > 0) {
+					++usedBlocks;
+					if (block < min || block >= max) {
+						printf("Error: Bad block number (extent=%d, name=\"%s\", block=%d)\n", extent, prfile(sb, extent), block);
+						if (ask("Remove file")) {
+							*status = 0xE5;
+							ret |= MODIFIED;
+							break;
+						} else {
+							ret |= BROKEN;
 						}
 					}
 				}
-				if (*status == 0xe5) {
-					continue;
-				}
+			}
+			if (*status == 0xe5) {
+				continue;
 			}
 
 			/* check number of used blocks ? */
 
 			/* check record count */
-			int i, min, max, recordsInBlocks, used = 0;
+			int recordsInBlocks, used = 0;
 
 			min = (dir->extnol % sb->extents) * 16 / sb->extents;
 			max = ((dir->extnol % sb->extents) + 1) * 16 / sb->extents;
@@ -310,7 +314,8 @@ static int fsck(struct cpmInode *root, const char *image) {
 			unsigned long created, modified;
 			unsigned char s;
 
-			if ((s = sb->dir[extent2 = (extent & ~3)].status) <= (sb->type == CPMFS_P2DOS ? 31 : 15)) /* time stamps for first of the three extents */ {
+			s = sb->dir[extent2 = (extent & ~3)].status;
+			if (s <= (sb->type == CPMFS_P2DOS ? 31 : 15)) /* time stamps for first of the three extents */ {
 				bcdCheck(dir->name[2], 24, sb->cnotatime ? "creation date" : "access date", "hour", extent, extent2);
 				bcdCheck(dir->name[3], 60, sb->cnotatime ? "creation date" : "access date", "minute", extent, extent2);
 				bcdCheck(dir->name[6], 24, "modification date", "hour", extent, extent2);
@@ -322,7 +327,8 @@ static int fsck(struct cpmInode *root, const char *image) {
 				}
 			}
 
-			if ((s = sb->dir[extent2 = (extent & ~3) + 1].status) <= (sb->type == CPMFS_P2DOS ? 31 : 15)) /* time stamps for second */ {
+			s = sb->dir[extent2 = (extent & ~3) + 1].status;
+			if (s <= (sb->type == CPMFS_P2DOS ? 31 : 15)) { /* time stamps for second */
 				bcdCheck(dir->lrc, 24, sb->cnotatime ? "creation date" : "access date", "hour", extent, extent2);
 				bcdCheck(dir->extnoh, 60, sb->cnotatime ? "creation date" : "access date", "minute", extent, extent2);
 				bcdCheck(dir->pointers[1], 24, "modification date", "hour", extent, extent2);
@@ -334,7 +340,8 @@ static int fsck(struct cpmInode *root, const char *image) {
 				}
 			}
 
-			if ((s = sb->dir[extent2 = (extent & ~3) + 2].status) <= (sb->type == CPMFS_P2DOS ? 31 : 15)) /* time stamps for third */ {
+			s = sb->dir[extent2 = (extent & ~3) + 2].status;
+			if (s <= (sb->type == CPMFS_P2DOS ? 31 : 15)) { /* time stamps for third */
 				bcdCheck(dir->pointers[7], 24, sb->cnotatime ? "creation date" : "access date", "hour", extent, extent2);
 				bcdCheck(dir->pointers[8], 60, sb->cnotatime ? "creation date" : "access date", "minute", extent, extent2);
 				bcdCheck(dir->pointers[11], 24, "modification date", "hour", extent, extent2);
@@ -346,9 +353,11 @@ static int fsck(struct cpmInode *root, const char *image) {
 				}
 			}
 
-		} else if (sb->type == CPMFS_DR3 && *status == 0x20) /* disc label */ {
+		} else if ((sb->type == CPMFS_DR3 || sb->type == CPMFS_MPM) &&
+						*status == 0x20) { /* disc label */
 			unsigned long created, modified;
 
+			/* TODO: Label always has create time - never access time */
 			bcdCheck(dir->pointers[10], 24, sb->cnotatime ? "creation date" : "access date", "hour", extent, extent);
 			bcdCheck(dir->pointers[11], 60, sb->cnotatime ? "creation date" : "access date", "minute", extent, extent);
 			bcdCheck(dir->pointers[14], 24, "modification date", "hour", extent, extent);
@@ -358,7 +367,8 @@ static int fsck(struct cpmInode *root, const char *image) {
 			if (sb->cnotatime && modified < created) {
 				printf("Warning: Label modification date earlier than creation date (extent=%d)\n", extent);
 			}
-			if (dir->extnol & 0x40 && dir->extnol & 0x10) {
+			if (sb->type == CPMFS_DR3 &&
+					dir->extnol & 0x40 && dir->extnol & 0x10) {
 				printf("Error: Bit 4 and 6 can only be exclusively be set (extent=%d, label byte=0x%02x)\n", extent, (unsigned char)dir->extnol);
 				if (ask("Time stamp on creation")) {
 					dir->extnol &= ~0x40;
@@ -370,7 +380,8 @@ static int fsck(struct cpmInode *root, const char *image) {
 					ret |= BROKEN;
 				}
 			}
-			if (dir->extnol & 0x80 && pwdCheck(extent, dir->pointers, dir->lrc)) {
+			if ((dir->extnol & 0x80) &&
+					pwdCheck(extent, dir->pointers, dir->lrc)) {
 				char msg[80];
 
 				sprintf(msg, "Set password to %c%c%c%c%c%c%c%c", T0, T1, T2, T3, T4, T5, T6, T7);
@@ -389,7 +400,8 @@ static int fsck(struct cpmInode *root, const char *image) {
 					ret |= BROKEN;
 				}
 			}
-		} else if (sb->type == CPMFS_DR3 && *status >= 16 && *status <= 31) /* password */ {
+		} else if ((sb->type & CPMFS_HAS_XFCBS) &&
+					*status >= 16 && *status <= 31) { /* XFCB */
 			/* check name and extension */
 			int i;
 			unsigned char *c;
@@ -447,7 +459,9 @@ static int fsck(struct cpmInode *root, const char *image) {
 					ret |= BROKEN;
 				}
 			}
-
+			if (sb->type & CPMFS_MPM_DATES) {
+				/* TODO: sanity check MP/M time/date stamps */
+			}
 		} else if (*status != 0xe5) /* bad status */ {
 			printf("Error: Bad status (extent=%d, name=\"%s\", status=0x%02x)\n", extent, prfile(sb, extent), *status);
 			if (ask("Clear entry")) {
@@ -458,14 +472,14 @@ static int fsck(struct cpmInode *root, const char *image) {
 			}
 			continue;
 		}
-
 	}
 
 	/* Phase 2: check extent connectivity */
 	printf("Phase 2: check extent connectivity\n");
 	/* check multiple allocated blocks */
 	for (extent = 0; extent < sb->maxdir; ++extent) {
-		if ((dir = sb->dir + extent)->status <= (sb->type == CPMFS_P2DOS ? 31 : 15)) {
+		dir = sb->dir + extent;
+		if (dir->status <= (sb->type == CPMFS_P2DOS ? 31 : 15)) {
 			int i, j, block, block2;
 
 			for (i = 0; i < 16; ++i) {
@@ -598,8 +612,10 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Usage: %s [-f format] [-n] image\n", cmd);
 		exit(1);
 	}
-	if ((err = Device_open(&sb.dev, image, (norepair ? O_RDONLY : O_RDWR), devopts))) {
-		if ((err = Device_open(&sb.dev, image, O_RDONLY, devopts))) {
+	err = Device_open(&sb.dev, image, (norepair ? O_RDONLY : O_RDWR), devopts);
+	if (err) {
+		err = Device_open(&sb.dev, image, O_RDONLY, devopts);
+		if (err) {
 			fprintf(stderr, "%s: cannot open %s: %s\n", cmd, image, err);
 			exit(1);
 		} else {

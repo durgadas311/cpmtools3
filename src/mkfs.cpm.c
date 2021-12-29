@@ -27,7 +27,8 @@ static int mkfs(struct cpmSuperBlock *drive, const char *name, const char *forma
 
 
 	/* open image file */
-	if ((fd = open(name, O_BINARY | O_CREAT | O_WRONLY, 0666)) < 0) {
+	fd = open(name, O_BINARY | O_CREAT | O_WRONLY, 0666);
+	if (fd < 0) {
 		boo = strerror(errno);
 		return -1;
 	}
@@ -109,14 +110,16 @@ static int mkfs(struct cpmSuperBlock *drive, const char *name, const char *forma
 		struct cpmSuperBlock super;
 		const char *err;
 
-		if ((err = Device_open(&super.dev, name, O_RDWR, NULL))) {
+		err = Device_open(&super.dev, name, O_RDWR, NULL);
+		if (err) {
 			fprintf(stderr, "%s: can not open %s (%s)\n", cmd, name, err);
 			exit(1);
 		}
 		cpmReadSuper(&super, &root, format, uppercase);
 
 		records = root.sb->maxdir / 8;
-		if (!(ds = malloc(records * 128))) {
+		ds = malloc(records * 128);
+		if (ds == NULL) {
 			cpmUmount(&super);
 			return -1;
 		}
@@ -209,7 +212,8 @@ int main(int argc, char *argv[]) {
 	drive.dev.opened = 0;
 	cpmReadSuper(&drive, &root, format, uppercase);
 	bootTrackSize = drive.boottrk * drive.secLength * drive.sectrk;
-	if ((bootTracks = malloc(bootTrackSize)) == NULL) {
+	bootTracks = malloc(bootTrackSize);
+	if (bootTracks == NULL) {
 		fprintf(stderr, "%s: can not allocate boot track buffer: %s\n", cmd, strerror(errno));
 		exit(1);
 	}
@@ -219,7 +223,8 @@ int main(int argc, char *argv[]) {
 		int fd;
 		size_t size;
 
-		if ((fd = open(boot[c], O_BINARY | O_RDONLY)) == -1) {
+		fd = open(boot[c], O_BINARY | O_RDONLY);
+		if (fd == -1) {
 			fprintf(stderr, "%s: can not open %s: %s\n", cmd, boot[c], strerror(errno));
 			exit(1);
 		}

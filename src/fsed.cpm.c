@@ -223,7 +223,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	/* open image */
-	if ((err = Device_open(&drive.dev, image, O_RDONLY, devopts))) {
+	err = Device_open(&drive.dev, image, O_RDONLY, devopts);
+	if (err) {
 		fprintf(stderr, "%s: cannot open %s (%s)\n", cmd, image, err);
 		exit(1);
 	}
@@ -233,7 +234,9 @@ int main(int argc, char *argv[]) {
 	}
 
 	/* alloc sector buffers */
-	if ((buf = malloc(drive.secLength)) == NULL || (mapbuf = malloc(drive.secLength)) == NULL) {
+	buf = malloc(drive.secLength);
+	mapbuf = malloc(drive.secLength);
+	if (buf == NULL || mapbuf == NULL) {
 		fprintf(stderr, "fsed.cpm: can not allocate sector buffer (%s).\n", strerror(errno));
 		exit(1);
 	}

@@ -494,7 +494,8 @@ int main(int argc, char *argv[]) {
 #endif
 		exit(1);
 	}
-	if ((err = Device_open(&super.dev, image, O_RDONLY, devopts))) {
+	err = Device_open(&super.dev, image, O_RDONLY, devopts);
+	if (err) {
 		fprintf(stderr, "%s: cannot open %s (%s)\n", cmd, image, err);
 		exit(1);
 	}

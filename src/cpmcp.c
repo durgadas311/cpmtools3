@@ -51,7 +51,8 @@ static int cpmToUnix(const struct cpmInode *root, const char *src, const char *d
 		FILE *ufp;
 
 		cpmOpen(&ino, &file, O_RDONLY);
-		if ((ufp = fopen(dest, text ? "w" : "wb")) == NULL) {
+		ufp = fopen(dest, text ? "w" : "wb");
+		if (ufp == NULL) {
 			fprintf(stderr, "%s: can not create %s: %s\n", cmd, dest, strerror(errno));
 			exitcode = 1;
 		} else {
@@ -229,7 +230,8 @@ int main(int argc, char *argv[]) {
 	} else {
 		usage();
 	}
-	if ((err = Device_open(&super.dev, image, readcpm ? O_RDONLY : O_RDWR, devopts))) {
+	err = Device_open(&super.dev, image, readcpm ? O_RDONLY : O_RDWR, devopts);
+	if (err) {
 		fprintf(stderr, "%s: cannot open %s (%s)\n", cmd, image, err);
 		exit(1);
 	}
@@ -266,81 +268,86 @@ int main(int argc, char *argv[]) {
 				exitcode = 1;
 			}
 		}
-	} else /* copy from UNIX to CP/M */ {
+	} else { /* copy from UNIX to CP/M */
 		int i;
 
 		for (i = optind; i < (argc - 1); ++i) {
 			char *dest = NULL;
 			FILE *ufp;
+			struct cpmInode ino;
+			char cpmname[2 + 8 + 1 + 3 + 1]; /* 00foobarxy.zzy\0 */
+			char *translate;
+			struct stat st;
 
-			if ((ufp = fopen(argv[i], "rb")) == NULL) /* cry a little */ {
+			ufp = fopen(argv[i], "rb");
+			if (ufp == NULL) /* cry a little */ {
 				fprintf(stderr, "%s: can not open %s: %s\n", cmd, argv[i], strerror(errno));
 				exitcode = 1;
-			} else {
-				struct cpmInode ino;
-				char cpmname[2 + 8 + 1 + 3 + 1]; /* 00foobarxy.zzy\0 */
-				char *translate;
-				struct stat st;
-
-				stat(argv[i], &st);
-
-				if (todir) {
-					if ((dest = strrchr(argv[i], '/')) != NULL) {
-						++dest;
-					} else {
-						dest = argv[i];
-					}
-					snprintf(cpmname, sizeof(cpmname), "%02d%s", userNumber(argv[argc - 1]), dest);
-				} else {
-					snprintf(cpmname, sizeof(cpmname), "%02d%s", userNumber(argv[argc - 1]), strchr(argv[argc - 1], ':') + 1);
-				}
-
-				translate = cpmname;
-				while ((translate = strchr(translate, ','))) {
-					*translate = '/';
-				}
-
-				if (cpmCreat(&root, cpmname, &ino, 0666) == -1) /* just cry */ {
-					fprintf(stderr, "%s: can not create %s: %s\n", cmd, cpmname, boo);
-					exitcode = 1;
-				} else {
-					struct cpmFile file;
-					int ohno = 0;
-					char buf[4096 + 1];
-
-					cpmOpen(&ino, &file, O_WRONLY);
-					do {
-						ssize_t j;
-
-						for (j = 0; j < ((ssize_t)sizeof(buf) / 2) && (c = getc(ufp)) != EOF; ++j) {
-							if (text && c == '\n') {
-								buf[j++] = '\r';
-							}
-							buf[j] = c;
-						}
-						if (text && c == EOF) {
-							buf[j++] = '\032';
-						}
-						if (cpmWrite(&file, buf, j) != j) {
-							fprintf(stderr, "%s: can not write %s: %s\n", cmd, dest, boo);
-							ohno = 1;
-							exitcode = 1;
-							break;
-						}
-					} while (c != EOF);
-					if (cpmClose(&file) == EOF && !ohno) /* I just can't hold back the tears */ {
-						fprintf(stderr, "%s: can not close %s: %s\n", cmd, dest, boo);
-						exitcode = 1;
-					}
-					if (preserve && !ohno) {
-						struct utimbuf times;
-						times.actime = st.st_atime;
-						times.modtime = st.st_mtime;
-						cpmUtime(&ino, &times);
-					}
-				}
-				fclose(ufp);
+				continue;
 			}
+
+			stat(argv[i], &st);
+
+			if (todir) {
+				dest = strrchr(argv[i], '/');
+				if (dest != NULL) {
+					++dest;
+				} else {
+					dest = argv[i];
+				}
+				snprintf(cpmname, sizeof(cpmname), "%02d%s",
+					userNumber(argv[argc - 1]), dest);
+			} else {
+				snprintf(cpmname, sizeof(cpmname), "%02d%s",
+					userNumber(argv[argc - 1]),
+					strchr(argv[argc - 1], ':') + 1);
+			}
+
+			translate = cpmname;
+			while ((translate = strchr(translate, ','))) {
+				*translate = '/';
+			}
+
+			if (cpmCreat(&root, cpmname, &ino, 0666) == -1) /* just cry */ {
+				fprintf(stderr, "%s: can not create %s: %s\n", cmd, cpmname, boo);
+				exitcode = 1;
+			} else {
+				struct cpmFile file;
+				int ohno = 0;
+				char buf[4096 + 1];
+
+				cpmOpen(&ino, &file, O_WRONLY);
+				do {
+					int j;
+
+					for (j = 0; j < (sizeof(buf) / 2) && (c = getc(ufp)) != EOF; ++j) {
+						if (text && c == '\n') {
+							buf[j++] = '\r';
+						}
+						buf[j] = c;
+					}
+					if (text && c == EOF) {
+						buf[j++] = '\032';
+					}
+					if (cpmWrite(&file, buf, j) != j) {
+						fprintf(stderr, "%s: can not write %s: %s\n", cmd, dest, boo);
+						ohno = 1;
+						exitcode = 1;
+						break;
+					}
+				} while (c != EOF);
+				if (cpmClose(&file) == EOF && !ohno) /* I just can't hold back the tears */ {
+					fprintf(stderr, "%s: can not close %s: %s\n", cmd, dest, boo);
+					exitcode = 1;
+				}
+				if (preserve && !ohno) {
+					struct utimbuf times;
+					times.actime = st.st_atime;
+					times.modtime = st.st_mtime;
+					cpmUtime(&ino, &times);
+				}
+			}
+			fclose(ufp);
 		}
 	}
 	cpmUmount(&super);

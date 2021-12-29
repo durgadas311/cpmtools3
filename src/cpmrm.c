@@ -53,7 +53,8 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Usage: %s [-f format] [-T dsktype] [-u] image pattern ...\n", cmd);
 		exit(1);
 	}
-	if ((err = Device_open(&drive.dev, image, O_RDWR, devopts))) {
+	err = Device_open(&drive.dev, image, O_RDWR, devopts);
+	if (err) {
 		fprintf(stderr, "%s: cannot open %s (%s)\n", cmd, image, err);
 		exit(1);
 	}

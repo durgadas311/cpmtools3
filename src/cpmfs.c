@@ -378,8 +378,9 @@ static int readBlock(const struct cpmSuperBlock *d, int blockno, char *buffer,
 #ifdef CPMFS_DEBUG
 			fprintf(stderr, "readBlock: read sector %d/%d\n", d->skewtab[sect], track);
 #endif
-			if ((err = Device_readSector(&d->dev, track, d->skewtab[sect],
-					buffer + (d->secLength * counter)))) {
+			err = Device_readSector(&d->dev, track, d->skewtab[sect],
+					buffer + (d->secLength * counter));
+			if (err) {
 				boo = err;
 				return -1;
 			}
@@ -415,10 +416,13 @@ static int writeBlock(const struct cpmSuperBlock *d, int blockno, char const *bu
 	for (counter = 0; counter <= end; ++counter) {
 		char const *err;
 
-		if (counter >= start && (err = Device_writeSector(&d->dev, track,
-				d->skewtab[sect], buffer + (d->secLength * counter)))) {
-			boo = err;
-			return -1;
+		if (counter >= start) {
+			err = Device_writeSector(&d->dev, track, d->skewtab[sect],
+					buffer + (d->secLength * counter));
+			if (err) {
+				boo = err;
+				return -1;
+			}
 		}
 		++sect;
 		if (sect >= d->sectrk) {
@@ -754,10 +758,13 @@ static int diskdefReadSuper(struct cpmSuperBlock *d, char const *format) {
 
 	d->libdskGeometry[0] = '\0';
 	d->type = 0;
-	if ((fp = fopen("diskdefs", "r")) == NULL &&
-			(fp = fopen(DISKDEFS, "r")) == NULL) {
-		fprintf(stderr, "%s: Neither `diskdefs' nor `" DISKDEFS "' could be opened.\n", cmd);
-		exit(1);
+	fp = fopen("diskdefs", "r");
+	if (fp == NULL) {
+		fp = fopen(DISKDEFS, "r");
+		if (fp == NULL) {
+			fprintf(stderr, "%s: Neither `diskdefs' nor `" DISKDEFS "' could be opened.\n", cmd);
+			exit(1);
+		}
 	}
 	ln = 1;
 	while (fgets(line, sizeof(line), fp) != NULL) {
@@ -775,10 +782,12 @@ static int diskdefReadSuper(struct cpmSuperBlock *d, char const *format) {
 			strcpy(s, "\n");
 		}
 
-		for (argc = 0;
-			argc < 1 && (argv[argc] = strtok(argc ? NULL : line, " \t\n"));
-			++argc);
-		if ((argv[argc] = strtok(NULL, "\n")) != NULL) {
+		for (argc = 0; argc < 1; ++argc) {
+			argv[argc] = strtok(argc ? NULL : line, " \t\n");
+			if (argv[argc] == NULL) break;
+		}
+		argv[argc] = strtok(NULL, "\n");
+		if (argv[argc] != NULL) {
 			++argc;
 		}
 		if (insideDef) {
@@ -975,7 +984,8 @@ static int amsReadSuper(struct cpmSuperBlock *d, char const *format) {
 	char const *err;
 
 	Device_setGeometry(&d->dev, 512, 9, 40, 0, "pcw180");
-	if ((err = Device_readSector(&d->dev, 0, 0, (char *)boot_sector))) {
+	err = Device_readSector(&d->dev, 0, 0, (char *)boot_sector);
+	if (err) {
 		fprintf(stderr, "%s: Failed to read Amstrad superblock (%s)\n", cmd, err);
 		exit(1);
 	}
@@ -1120,7 +1130,8 @@ int cpmReadSuper(struct cpmSuperBlock *d, struct cpmInode *root, char const *for
 	if (d->skewtab == NULL) {
 		int i, j, k;
 
-		if ((d->skewtab = malloc(d->sectrk * sizeof(int))) == NULL) {
+		d->skewtab = malloc(d->sectrk * sizeof(int));
+		if (d->skewtab == NULL) {
 			boo = strerror(errno);
 			return -1;
 		}
@@ -1142,14 +1153,16 @@ int cpmReadSuper(struct cpmSuperBlock *d, struct cpmInode *root, char const *for
 
 	/* initialise allocation vector bitmap */
 	d->alvSize = ((d->secLength * d->sectrk * (d->tracks - d->boottrk)) / d->blksiz + INTBITS - 1) / INTBITS;
-	if ((d->alv = malloc(d->alvSize * sizeof(int))) == NULL) {
+	d->alv = malloc(d->alvSize * sizeof(int));
+	if (d->alv == NULL) {
 		boo = strerror(errno);
 		return -1;
 	}
 
 	/* allocate directory buffer */
 	assert(sizeof(struct PhysDirectoryEntry) == 32);
-	if ((d->dir = malloc(((d->maxdir * 32 + d->blksiz - 1) / d->blksiz) * d->blksiz)) == NULL) {
+	d->dir = malloc(((d->maxdir * 32 + d->blksiz - 1) / d->blksiz) * d->blksiz);
+	if (d->dir == NULL) {
 		boo = strerror(errno);
 		return -1;
 	}
@@ -1182,8 +1195,10 @@ int cpmReadSuper(struct cpmSuperBlock *d, struct cpmInode *root, char const *for
 #ifdef CPMFS_DEBUG
 		fprintf(stderr, "getformat: found %d passwords\n", passwords);
 #endif
-		if ((d->passwdLength = passwords * PASSWD_RECLEN)) {
-			if ((d->passwd = malloc(d->passwdLength)) == NULL) {
+		d->passwdLength = passwords * PASSWD_RECLEN;
+		if (d->passwdLength) {
+			d->passwd = malloc(d->passwdLength);
+			if (d->passwd == NULL) {
 				boo = "out of memory";
 				return -1;
 			}
@@ -1235,7 +1250,8 @@ int cpmReadSuper(struct cpmSuperBlock *d, struct cpmInode *root, char const *for
 				}
 				if (d->dir[i].extnol & 0x1) {
 					d->labelLength = 12;
-					if ((d->label = malloc(d->labelLength)) == NULL) {
+					d->label = malloc(d->labelLength);
+					if (d->label == NULL) {
 						boo = "out of memory";
 						return -1;
 					}
@@ -1560,18 +1576,20 @@ int cpmUnlink(const struct cpmInode *dir, char const *fname) {
 	if (splitFilename(fname, dir->sb->type, name, extension, &user) == -1) {
 		return -1;
 	}
-	if ((extent = findFileExtent(drive, user, name, extension, 0, -1)) == -1) {
+	extent = findFileExtent(drive, user, name, extension, 0, -1);
+	if (extent == -1) {
 		return -1;
 	}
 	drive->dirtyDirectory = 1;
-	drive->dir[extent].status = (char)0xe5;
+	drive->dir[extent].status = 0xe5;
 	do {
-		drive->dir[extent].status = (char)0xe5;
-	} while ((extent = findFileExtent(drive, user, name, extension, extent + 1, -1)) >= 0);
+		drive->dir[extent].status = 0xe5;
+		extent = findFileExtent(drive, user, name, extension, extent + 1, -1);
+	} while (extent >= 0);
 	if (drive->type & CPMFS_HAS_XFCBS) {
 		extent = findFileExtent(drive, user + 16, name, extension, 0, -1);
 		if (extent != -1) {
-			drive->dir[extent].status = (char)0xe5;
+			drive->dir[extent].status = 0xe5;
 		}
 	}
 	alvInit(drive);
@@ -1600,7 +1618,8 @@ int cpmRename(const struct cpmInode *dir, char const *old, char const *new) {
 	if (splitFilename(new, dir->sb->type, newname, newext, &newuser) == -1) {
 		return -1;
 	}
-	if ((extent = findFileExtent(drive, olduser, oldname, oldext, 0, -1)) == -1) {
+	extent = findFileExtent(drive, olduser, oldname, oldext, 0, -1);
+	if (extent == -1) {
 		return -1;
 	}
 	if (findFileExtent(drive, newuser, newname, newext, 0, -1) != -1) {
@@ -1612,7 +1631,8 @@ int cpmRename(const struct cpmInode *dir, char const *old, char const *new) {
 		drive->dir[extent].status = newuser;
 		memcpy7(drive->dir[extent].name, newname, 8);
 		memcpy7(drive->dir[extent].ext, newext, 3);
-	} while ((extent = findFileExtent(drive, olduser, oldname, oldext, extent + 1, -1)) != -1);
+		extent = findFileExtent(drive, olduser, oldname, oldext, extent + 1, -1);
+	} while (extent != -1);
 	if (drive->type & CPMFS_HAS_XFCBS) {
 		extent = findFileExtent(drive, olduser + 16, oldname, oldext, 0, -1);
 		if (extent != -1) {
@@ -1898,10 +1918,14 @@ ssize_t cpmWrite(struct cpmFile *file, char const *buf, size_t count) {
 	while (count > 0) {
 		if (findext) {
 			extentno = file->pos / 16384;
-			extent = findFileExtent(file->ino->sb, file->ino->sb->dir[file->ino->ino].status, file->ino->sb->dir[file->ino->ino].name, file->ino->sb->dir[file->ino->ino].ext, 0, extentno);
+			extent = findFileExtent(file->ino->sb,
+				file->ino->sb->dir[file->ino->ino].status,
+				file->ino->sb->dir[file->ino->ino].name,
+				file->ino->sb->dir[file->ino->ino].ext, 0, extentno);
 			nextextpos = (file->pos / extcap) * extcap + extcap;
 			if (extent == -1) {
-				if ((extent = findFreeExtent(file->ino->sb)) == -1) {
+				extent = findFreeExtent(file->ino->sb);
+				if (extent == -1) {
 					return (got == 0 ? -1 : got);
 				}
 				file->ino->sb->dir[extent] = file->ino->sb->dir[file->ino->ino];
@@ -1923,17 +1947,19 @@ ssize_t cpmWrite(struct cpmFile *file, char const *buf, size_t count) {
 			if (file->ino->sb->size > 256) {
 				ptr *= 2;
 			}
-			block = (unsigned char)file->ino->sb->dir[extent].pointers[ptr];
+			block = file->ino->sb->dir[extent].pointers[ptr];
 			if (file->ino->sb->size > 256) {
-				block += ((unsigned char)file->ino->sb->dir[extent].pointers[ptr + 1]) << 8;
+				block += file->ino->sb->dir[extent].pointers[ptr + 1] << 8;
 			}
-			if (block == 0) /* allocate new block, set start/end to cover it */ {
-				if ((block = allocBlock(file->ino->sb)) == -1) {
+			if (block == 0) { /* allocate new block, set start/end to cover it */
+				block = allocBlock(file->ino->sb);
+				if (block == -1) {
 					return (got == 0 ? -1 : got);
 				}
 				file->ino->sb->dir[extent].pointers[ptr] = block & 0xff;
 				if (file->ino->sb->size > 256) {
-					file->ino->sb->dir[extent].pointers[ptr + 1] = (block >> 8) & 0xff;
+					file->ino->sb->dir[extent].pointers[ptr + 1] =
+								(block >> 8) & 0xff;
 				}
 				start = 0;
 				/* By setting end to the end of the block and not the end
@@ -1946,9 +1972,11 @@ ssize_t cpmWrite(struct cpmFile *file, char const *buf, size_t count) {
 				time(&file->ino->ctime);
 				updateTimeStamps(file->ino, extent);
 				updateDsStamps(file->ino, extent);
-			} else /* read existing block and set start/end to cover modified parts */ {
+			} else { /* read existing block and set start/end to cover modified parts */
 				start = (file->pos % blocksize) / file->ino->sb->secLength;
-				end = ((int)(file->pos % blocksize + count) >= blocksize ? blocksize - 1 : (int)(file->pos % blocksize + count - 1)) / file->ino->sb->secLength;
+				end = ((int)(file->pos % blocksize + count) >= blocksize ?
+					blocksize - 1 :
+					(int)(file->pos % blocksize + count - 1)) / file->ino->sb->secLength;
 				if (file->pos % file->ino->sb->secLength) {
 					if (readBlock(file->ino->sb, block, buffer, start, start) == -1) {
 						if (got == 0) {
@@ -2058,7 +2086,8 @@ int cpmCreat(struct cpmInode *dir, char const *fname, struct cpmInode *ino, mode
 		return -1;
 	}
 	drive = dir->sb;
-	if ((extent = findFreeExtent(dir->sb)) == -1) {
+	extent = findFreeExtent(dir->sb);
+	if (extent == -1) {
 		return -1;
 	}
 	ent = dir->sb->dir + extent;
@@ -2152,7 +2181,8 @@ int cpmAttrSet(struct cpmInode *ino, cpm_attr_t attrib) {
 	do {
 		memcpy(drive->dir[extent].name, name, 8);
 		memcpy(drive->dir[extent].ext, extension, 3);
-	} while ((extent = findFileExtent(drive, user, name, extension, extent + 1, -1)) != -1);
+		extent = findFileExtent(drive, user, name, extension, extent + 1, -1);
+	} while (extent != -1);
 
 	/* Update the stored (inode) copies of the file attributes and mode */
 	ino->attr = attrib;
