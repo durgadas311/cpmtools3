@@ -17,7 +17,7 @@ const char *Device_open(struct Device *this, const char *filename, int mode, con
 	}
 	this->fd = open(filename, mode);
 	this->opened = (this->fd == -1 ? 0 : 1);
-	return ((this->fd == -1) ? strerror(errno) : (const char *)0);
+	return ((this->fd == -1) ? strerror(errno) : NULL);
 }
 
 /*
@@ -36,7 +36,7 @@ const char *Device_setGeometry(struct Device *this, int secLength, int sectrk, i
  */
 const char *Device_close(struct Device *this) {
 	this->opened = 0;
-	return ((close(this->fd) == -1) ? strerror(errno) : (const char *)0);
+	return ((close(this->fd) == -1) ? strerror(errno) : NULL);
 }
 
 /*
@@ -62,7 +62,7 @@ const char *Device_readSector(const struct Device *this, int track, int sector, 
 			memset(buf + res, 0, this->secLength - res); /* hit end of disk image */
 		}
 	}
-	return (const char *)0;
+	return NULL;
 }
 
 /*
@@ -77,7 +77,7 @@ const char *Device_writeSector(const struct Device *this, int track, int sector,
 		return strerror(errno);
 	}
 	if (write(this->fd, buf, this->secLength) == this->secLength) {
-		return (const char *)0;
+		return NULL;
 	}
 	return strerror(errno);
 }

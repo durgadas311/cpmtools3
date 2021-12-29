@@ -158,7 +158,7 @@ int main(int argc, char *argv[]) {
 	int timeStamps = 0;
 	size_t bootTrackSize, used;
 	char *bootTracks;
-	const char *boot[4] = {(const char *)0, (const char *)0, (const char *)0, (const char *)0};
+	const char *boot[4] = {NULL, NULL, NULL, NULL};
 
 	if (!(format = getenv("CPMTOOLSFMT"))) {
 		format = FORMAT;
@@ -166,13 +166,13 @@ int main(int argc, char *argv[]) {
 	while ((c = getopt(argc, argv, "b:f:L:tuh?")) != EOF) {
 		switch (c) {
 		case 'b':
-			if (boot[0] == (const char *)0) {
+			if (boot[0] == NULL) {
 				boot[0] = optarg;
-			} else if (boot[1] == (const char *)0) {
+			} else if (boot[1] == NULL) {
 				boot[1] = optarg;
-			} else if (boot[2] == (const char *)0) {
+			} else if (boot[2] == NULL) {
 				boot[2] = optarg;
-			} else if (boot[3] == (const char *)0) {
+			} else if (boot[3] == NULL) {
 				boot[3] = optarg;
 			} else {
 				usage = 1;
@@ -209,7 +209,7 @@ int main(int argc, char *argv[]) {
 	drive.dev.opened = 0;
 	cpmReadSuper(&drive, &root, format, uppercase);
 	bootTrackSize = drive.boottrk * drive.secLength * drive.sectrk;
-	if ((bootTracks = malloc(bootTrackSize)) == (void *)0) {
+	if ((bootTracks = malloc(bootTrackSize)) == NULL) {
 		fprintf(stderr, "%s: can not allocate boot track buffer: %s\n", cmd, strerror(errno));
 		exit(1);
 	}

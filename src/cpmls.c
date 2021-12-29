@@ -10,7 +10,9 @@
 #include "getopt_.h"
 #include "cpmfs.h"
 
-static const char *const month[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+static const char *const month[12] = {
+	"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+};
 
 /*
  * namecmp -- compare two entries 
@@ -97,6 +99,20 @@ static void olddir(struct cpmSuperBlock *sb, char **dirent, int entries) {
 	}
 }
 
+/* print ASCII time, DD-mmm-YYYY HH:MM */
+static void printtime4(time_t ts) {
+	struct tm *tmp = localtime(&ts);
+	printf("  %02d-%s-%04d %02d:%02d", tmp->tm_mday, month[tmp->tm_mon],
+		tmp->tm_year + 1900, tmp->tm_hour, tmp->tm_min);
+}
+
+/* print ASCII time, MM/DD/YY HH:MM */
+static void printtime2(time_t ts) {
+	struct tm *tmp = localtime(&ts);
+	printf("%02d/%02d/%02d %02d:%02d  ", tmp->tm_mon + 1, tmp->tm_mday,
+			tmp->tm_year % 100, tmp->tm_hour, tmp->tm_min);
+}
+
 /*
  * oldddir -- old style long output 
  */
@@ -118,8 +134,6 @@ static void oldddir(struct cpmSuperBlock *sb, char **dirent, int entries, struct
 			int u10 = '0' + user / 10;
 			int u1 = '0' + user % 10;
 			for (i = 0; i < entries; ++i) {
-				struct tm *tmp;
-
 				if (dirent[i][0] == u10 && dirent[i][1] == u1) {
 					if (announce == 1) {
 						printf("\nUser %d:\n\n", user);
@@ -148,7 +162,7 @@ static void oldddir(struct cpmSuperBlock *sb, char **dirent, int entries, struct
 
 					cpmNamei(ino, dirent[i], &file);
 					cpmStat(&file, &statbuf);
-					printf(" %5.1ldK", (long) (statbuf.size + buf.f_bsize - 1) /
+					printf(" %5.1ldK", (long)(statbuf.size + buf.f_bsize - 1) /
 						buf.f_bsize * (buf.f_bsize / 1024));
 
 					printf(" %6.1ld ", (long)(statbuf.size / 128));
@@ -156,14 +170,12 @@ static void oldddir(struct cpmSuperBlock *sb, char **dirent, int entries, struct
 					putchar(statbuf.mode & 01000 ? 'S' : ' ');
 					putchar(' ');
 					if (statbuf.mtime) {
-						tmp = localtime(&statbuf.mtime);
-						printf("  %02d-%s-%04d %02d:%02d", tmp->tm_mday, month[tmp->tm_mon], tmp->tm_year + 1900, tmp->tm_hour, tmp->tm_min);
+						printtime4(statbuf.mtime);
 					} else if (statbuf.ctime) {
 						printf("                   ");
 					}
 					if (statbuf.ctime) {
-						tmp = localtime(&statbuf.ctime);
-						printf("  %02d-%s-%04d %02d:%02d", tmp->tm_mday, month[tmp->tm_mon], tmp->tm_year + 1900, tmp->tm_hour, tmp->tm_min);
+						printtime4(statbuf.ctime);
 					}
 					putchar('\n');
 					++l;
@@ -200,8 +212,6 @@ static void old3dir(struct cpmSuperBlock *sb, char **dirent, int entries, struct
 			int u10 = '0' + user / 10;
 			int u1 = '0' + user % 10;
 			for (i = 0; i < entries; ++i) {
-				struct tm *tmp;
-
 				if (dirent[i][0] == u10 && dirent[i][1] == u1) {
 					cpmNamei(ino, dirent[i], &file);
 					cpmStat(&file, &statbuf);
@@ -258,17 +268,14 @@ static void old3dir(struct cpmSuperBlock *sb, char **dirent, int entries, struct
 						printf("None   ");
 					}
 					if (statbuf.mtime) {
-						tmp = localtime(&statbuf.mtime);
-						printf("%02d/%02d/%02d %02d:%02d  ", tmp->tm_mon + 1, tmp->tm_mday, tmp->tm_year % 100, tmp->tm_hour, tmp->tm_min);
+						printtime2(statbuf.mtime);
 					} else {
 						printf("                ");
 					}
 					if (ino->sb->cnotatime && statbuf.ctime) {
-						tmp = localtime(&statbuf.ctime);
-						printf("%02d/%02d/%02d %02d:%02d", tmp->tm_mon + 1, tmp->tm_mday, tmp->tm_year % 100, tmp->tm_hour, tmp->tm_min);
+						printtime2(statbuf.ctime);
 					} else if (!ino->sb->cnotatime && statbuf.atime) {
-						tmp = localtime(&statbuf.atime);
-						printf("%02d/%02d/%02d %02d:%02d", tmp->tm_mon + 1, tmp->tm_mday, tmp->tm_year % 100, tmp->tm_hour, tmp->tm_min);
+						printtime2(statbuf.atime);
 					}
 					putchar('\n');
 					++l;
@@ -282,7 +289,8 @@ static void old3dir(struct cpmSuperBlock *sb, char **dirent, int entries, struct
 		printf("Total Records = %7.1d  ", totalRecs);
 		printf("Files Found = %4.1d\n", l);
 		printf("Total 1k Blocks = %6.1ld   ", (buf.f_bused * buf.f_bsize) / 1024);
-		printf("Used/Max Dir Entries For Drive A: %4.1ld/%4.1ld\n", buf.f_files - buf.f_ffree, buf.f_files);
+		printf("Used/Max Dir Entries For Drive A: %4.1ld/%4.1ld\n",
+				buf.f_files - buf.f_ffree, buf.f_files);
 	} else {
 		printf("No files found\n");
 	}
@@ -291,7 +299,8 @@ static void old3dir(struct cpmSuperBlock *sb, char **dirent, int entries, struct
 /*
  * ls -- UNIX style output 
  */
-static void ls(struct cpmSuperBlock *sb, char **dirent, int entries, struct cpmInode *ino, int l, int c, int iflag) {
+static void ls(struct cpmSuperBlock *sb, char **dirent, int entries, struct cpmInode *ino,
+			int l, int c, int iflag) {
 	int i, user, announce, any;
 	time_t now;
 	struct cpmStat statbuf;
@@ -477,9 +486,11 @@ int main(int argc, char *argv[]) {
 
 	if (usage) {
 #ifdef HAVE_LIBDSK_H
-		fprintf(stderr, "Usage: %s [-f format] [-T libdsk-type] [-d|-D|-F|-A|[-l][-c][-i]] [-u] image [file ...]\n", cmd);
+		fprintf(stderr, "Usage: %s [-f format] [-T libdsk-type] "
+				"[-d|-D|-F|-A|[-l][-c][-i]] [-u] image [file ...]\n", cmd);
 #else
-		fprintf(stderr, "Usage: %s [-f format] [-d|-D|-F|-A|[-l][-c][-i]] [-u] image [file ...]\n", cmd);
+		fprintf(stderr, "Usage: %s [-f format] "
+				"[-d|-D|-F|-A|[-l][-c][-i]] [-u] image [file ...]\n", cmd);
 #endif
 		exit(1);
 	}

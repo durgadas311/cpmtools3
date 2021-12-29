@@ -51,7 +51,7 @@ static int cpmToUnix(const struct cpmInode *root, const char *src, const char *d
 		FILE *ufp;
 
 		cpmOpen(&ino, &file, O_RDONLY);
-		if ((ufp = fopen(dest, text ? "w" : "wb")) == (FILE *)0) {
+		if ((ufp = fopen(dest, text ? "w" : "wb")) == NULL) {
 			fprintf(stderr, "%s: can not create %s: %s\n", cmd, dest, strerror(errno));
 			exitcode = 1;
 		} else {
@@ -270,10 +270,10 @@ int main(int argc, char *argv[]) {
 		int i;
 
 		for (i = optind; i < (argc - 1); ++i) {
-			char *dest = (char *)0;
+			char *dest = NULL;
 			FILE *ufp;
 
-			if ((ufp = fopen(argv[i], "rb")) == (FILE *)0) /* cry a little */ {
+			if ((ufp = fopen(argv[i], "rb")) == NULL) /* cry a little */ {
 				fprintf(stderr, "%s: can not open %s: %s\n", cmd, argv[i], strerror(errno));
 				exitcode = 1;
 			} else {
@@ -285,7 +285,7 @@ int main(int argc, char *argv[]) {
 				stat(argv[i], &st);
 
 				if (todir) {
-					if ((dest = strrchr(argv[i], '/')) != (char *)0) {
+					if ((dest = strrchr(argv[i], '/')) != NULL) {
 						++dest;
 					} else {
 						dest = argv[i];

@@ -103,7 +103,7 @@ const char *Device_close(struct Device *this) {
 	dsk_err_t e;
 	this->opened = 0;
 	e = dsk_close(&this->dev);
-	return (e ? dsk_strerror(e) : (const char *)0);
+	return (e ? dsk_strerror(e) : NULL);
 }
 
 /*
@@ -112,7 +112,7 @@ const char *Device_close(struct Device *this) {
 const char *Device_readSector(const struct Device *this, int track, int sector, char *buf) {
 	dsk_err_t e;
 	e = dsk_lread(this->dev, &this->geom, buf, (track * this->sectrk) + sector + this->offset / this->secLength);
-	return (e ? dsk_strerror(e) : (const char *)0);
+	return (e ? dsk_strerror(e) : NULL);
 }
 
 /*
@@ -121,5 +121,5 @@ const char *Device_readSector(const struct Device *this, int track, int sector, 
 const char *Device_writeSector(const struct Device *this, int track, int sector, const char *buf) {
 	dsk_err_t e;
 	e = dsk_lwrite(this->dev, &this->geom, buf, (track * this->sectrk) + sector + this->offset / this->secLength);
-	return (e ? dsk_strerror(e) : (const char *)0);
+	return (e ? dsk_strerror(e) : NULL);
 }

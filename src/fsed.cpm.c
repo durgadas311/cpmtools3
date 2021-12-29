@@ -176,7 +176,7 @@ const char cmd[] = "fsed.cpm";
 
 int main(int argc, char *argv[]) {
 	/* variables */
-	const char *devopts = (const char *)0;
+	const char *devopts = NULL;
 	int uppercase = 0;
 	char *image;
 	const char *err;
@@ -233,7 +233,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	/* alloc sector buffers */
-	if ((buf = malloc(drive.secLength)) == (char *)0 || (mapbuf = malloc(drive.secLength)) == (char *)0) {
+	if ((buf = malloc(drive.secLength)) == NULL || (mapbuf = malloc(drive.secLength)) == NULL) {
 		fprintf(stderr, "fsed.cpm: can not allocate sector buffer (%s).\n", strerror(errno));
 		exit(1);
 	}

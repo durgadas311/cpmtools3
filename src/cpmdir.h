@@ -2,14 +2,14 @@
 #define CPMDIR_H
 
 struct PhysDirectoryEntry {
-	char status;
-	char name[8];
-	char ext[3];
-	char extnol;
-	char lrc;
-	char extnoh;
-	char blkcnt;
-	char pointers[16];
+	unsigned char status;
+	unsigned char name[8];
+	unsigned char ext[3];
+	unsigned char extnol;
+	unsigned char lrc;
+	unsigned char extnoh;
+	unsigned char blkcnt;
+	unsigned char pointers[16];
 };
 
 #define ISFILECHAR(notFirst,c) (((notFirst) || (c)!=' ') && (c)>=' ' && !((c)&~0x7f) && (c)!='<' && (c)!='>' && (c)!='.' && (c)!=',' && (c)!=';' && (c)!=':' && (c)!='=' && (c)!='?' && (c)!='*' && (c)!= '[' && (c)!=']')

@@ -86,7 +86,7 @@ static int ask(const char *msg) {
 		}
 		printf("%s [Y]? ", msg);
 		fflush(stdout);
-		if (fgets(buf, sizeof(buf), stdin) == (char *)0) {
+		if (fgets(buf, sizeof(buf), stdin) == NULL) {
 			exit(1);
 		}
 		switch (toupper(buf[0])) {
@@ -151,49 +151,47 @@ static int fsck(struct cpmInode *root, const char *image) {
 	/* Phase 1: check extent fields */
 	printf("Phase 1: check extent fields\n");
 	for (extent = 0; extent < sb->maxdir; ++extent) {
-		char *status;
+		unsigned char *status;
 		int usedBlocks = 0;
 
 		dir = sb->dir + extent;
 		status = &dir->status;
-		if (*status >= 0 && *status <= (sb->type == CPMFS_P2DOS ? 31 : 15)) /* directory entry */ {
+		if (*status <= (sb->type == CPMFS_P2DOS ? 31 : 15)) /* directory entry */ {
 			/* check name and extension */
-			{
-				int i;
-				char *c;
+			int i;
+			char *c;
 
-				for (i = 0; i < 8; ++i) {
-					c = &(dir->name[i]);
-					if (!ISFILECHAR(i, *c & 0x7f) || islower(*c & 0x7f)) {
-						printf("Error: Bad name (extent=%d, name=\"%s\", position=%d)\n", extent, prfile(sb, extent), i);
-						if (ask("Remove file")) {
-							*status = (char)0xE5;
-							ret |= MODIFIED;
-							break;
-						} else {
-							ret |= BROKEN;
-						}
+			for (i = 0; i < 8; ++i) {
+				c = &(dir->name[i]);
+				if (!ISFILECHAR(i, *c & 0x7f) || islower(*c & 0x7f)) {
+					printf("Error: Bad name (extent=%d, name=\"%s\", position=%d)\n", extent, prfile(sb, extent), i);
+					if (ask("Remove file")) {
+						*status = (char)0xE5;
+						ret |= MODIFIED;
+						break;
+					} else {
+						ret |= BROKEN;
 					}
 				}
-				if (*status == (char)0xe5) {
-					continue;
-				}
-				for (i = 0; i < 3; ++i) {
-					c = &(dir->ext[i]);
-					if (!ISFILECHAR(1, *c & 0x7f) || islower(*c & 0x7f)) {
-						printf("Error: Bad name (extent=%d, name=\"%s\", position=%d)\n", extent, prfile(sb, extent), i);
-						if (ask("Remove file")) {
-							*status = (char)0xE5;
-							ret |= MODIFIED;
-							break;
-						} else {
-							ret |= BROKEN;
-						}
+			}
+			if (*status == (char)0xe5) {
+				continue;
+			}
+			for (i = 0; i < 3; ++i) {
+				c = &(dir->ext[i]);
+				if (!ISFILECHAR(1, *c & 0x7f) || islower(*c & 0x7f)) {
+					printf("Error: Bad name (extent=%d, name=\"%s\", position=%d)\n", extent, prfile(sb, extent), i);
+					if (ask("Remove file")) {
+						*status = (char)0xE5;
+						ret |= MODIFIED;
+						break;
+					} else {
+						ret |= BROKEN;
 					}
 				}
-				if (*status == (char)0xe5) {
-					continue;
-				}
+			}
+			if (*status == 0xe5) {
+				continue;
 			}
 
 			/* check extent number */
@@ -206,7 +204,7 @@ static int fsck(struct cpmInode *root, const char *image) {
 					ret |= BROKEN;
 				}
 			}
-			if (*status == (char)0xe5) {
+			if (*status == 0xe5) {
 				continue;
 			}
 			if ((dir->extnoh & 0xff) > 0x3f) {
@@ -218,7 +216,7 @@ static int fsck(struct cpmInode *root, const char *image) {
 					ret |= BROKEN;
 				}
 			}
-			if (*status == (char)0xe5) {
+			if (*status == 0xe5) {
 				continue;
 			}
 
@@ -232,7 +230,7 @@ static int fsck(struct cpmInode *root, const char *image) {
 					ret |= BROKEN;
 				}
 			}
-			if (*status == (char)0xe5) {
+			if (*status == 0xe5) {
 				continue;
 			}
 
@@ -243,16 +241,16 @@ static int fsck(struct cpmInode *root, const char *image) {
 				min = sb->dirblks;
 				max = sb->size;
 				for (i = 0; i < 16; ++i) {
-					block = dir->pointers[i] & 0xff;
+					block = dir->pointers[i];
 					if (sb->size > 256) {
-						block += (dir->pointers[++i] & 0xff) << 8;
+						block += (dir->pointers[++i] << 8);
 					}
 					if (block > 0) {
 						++usedBlocks;
 						if (block < min || block >= max) {
 							printf("Error: Bad block number (extent=%d, name=\"%s\", block=%d)\n", extent, prfile(sb, extent), block);
 							if (ask("Remove file")) {
-								*status = (char)0xE5;
+								*status = 0xE5;
 								ret |= MODIFIED;
 								break;
 							} else {
@@ -261,7 +259,7 @@ static int fsck(struct cpmInode *root, const char *image) {
 						}
 					}
 				}
-				if (*status == (char)0xe5) {
+				if (*status == 0xe5) {
 					continue;
 				}
 			}
@@ -269,47 +267,50 @@ static int fsck(struct cpmInode *root, const char *image) {
 			/* check number of used blocks ? */
 
 			/* check record count */
-			{
-				int i, min, max, recordsInBlocks, used = 0;
+			int i, min, max, recordsInBlocks, used = 0;
 
-				min = (dir->extnol % sb->extents) * 16 / sb->extents;
-				max = ((dir->extnol % sb->extents) + 1) * 16 / sb->extents;
-				assert(min < max);
-				for (i = min; i < max; ++i) {
-					/* [JCE] Rewritten because the previous implementation didn't work
-					 *       properly with Visual C++ */
-					if (dir->pointers[i] || (sb->size > 256 && dir->pointers[i + 1])) {
-						++used;
-					}
-					if (sb->size > 256) {
-						++i;
-					}
+			min = (dir->extnol % sb->extents) * 16 / sb->extents;
+			max = ((dir->extnol % sb->extents) + 1) * 16 / sb->extents;
+			assert(min < max);
+			for (i = min; i < max; ++i) {
+				/* [JCE] Rewritten because the previous implementation didn't work
+				 *       properly with Visual C++ */
+				if (dir->pointers[i] || (sb->size > 256 && dir->pointers[i + 1])) {
+					++used;
 				}
-				recordsInBlocks = (((unsigned char)dir->blkcnt) * 128 + sb->blksiz - 1) / sb->blksiz;
-				if (recordsInBlocks != used) {
-					printf("Error: Bad record count (extent=%d, name=\"%s\", record count=%d)\n", extent, prfile(sb, extent), dir->blkcnt & 0xff);
-					if (ask("Remove file")) {
-						*status = (char)0xE5;
-						ret |= MODIFIED;
-					} else {
-						ret |= BROKEN;
-					}
+				if (sb->size > 256) {
+					++i;
 				}
-				if (*status == (char)0xe5) {
-					continue;
+			}
+			recordsInBlocks = (dir->blkcnt * 128 + sb->blksiz - 1) / sb->blksiz;
+			if (recordsInBlocks != used) {
+				printf("Error: Bad record count (extent=%d, name=\"%s\", record count=%d)\n", extent, prfile(sb, extent), dir->blkcnt & 0xff);
+				if (ask("Remove file")) {
+					*status = 0xE5;
+					ret |= MODIFIED;
+				} else {
+					ret |= BROKEN;
 				}
+			}
+			if (*status == 0xe5) {
+				continue;
 			}
 
 			/* check for too large .com files */
-			if (((EXTENT(dir->extnol, dir->extnoh) == 3 && dir->blkcnt >= 126) || EXTENT(dir->extnol, dir->extnoh) >= 4) && (dir->ext[0] & 0x7f) == 'C' && (dir->ext[1] & 0x7f) == 'O' && (dir->ext[2] & 0x7f) == 'M') {
+			if (((EXTENT(dir->extnol, dir->extnoh) == 3 &&
+					dir->blkcnt >= 126) ||
+					EXTENT(dir->extnol, dir->extnoh) >= 4) &&
+					(dir->ext[0] & 0x7f) == 'C' &&
+					(dir->ext[1] & 0x7f) == 'O' &&
+					(dir->ext[2] & 0x7f) == 'M') {
 				printf("Warning: Oversized .COM file (extent=%d, name=\"%s\")\n", extent, prfile(sb, extent));
 			}
 
-		} else if ((sb->type == CPMFS_P2DOS || sb->type == CPMFS_DR3) && *status == 33) /* check time stamps ? */ {
+		} else if ((sb->type == CPMFS_P2DOS || sb->type == CPMFS_DR3) && *status == 0x21) /* check time stamps ? */ {
 			unsigned long created, modified;
-			char s;
+			unsigned char s;
 
-			if ((s = sb->dir[extent2 = (extent & ~3)].status) >= 0 && s <= (sb->type == CPMFS_P2DOS ? 31 : 15)) /* time stamps for first of the three extents */ {
+			if ((s = sb->dir[extent2 = (extent & ~3)].status) <= (sb->type == CPMFS_P2DOS ? 31 : 15)) /* time stamps for first of the three extents */ {
 				bcdCheck(dir->name[2], 24, sb->cnotatime ? "creation date" : "access date", "hour", extent, extent2);
 				bcdCheck(dir->name[3], 60, sb->cnotatime ? "creation date" : "access date", "minute", extent, extent2);
 				bcdCheck(dir->name[6], 24, "modification date", "hour", extent, extent2);
@@ -321,7 +322,7 @@ static int fsck(struct cpmInode *root, const char *image) {
 				}
 			}
 
-			if ((s = sb->dir[extent2 = (extent & ~3) + 1].status) >= 0 && s <= (sb->type == CPMFS_P2DOS ? 31 : 15)) /* time stamps for second */ {
+			if ((s = sb->dir[extent2 = (extent & ~3) + 1].status) <= (sb->type == CPMFS_P2DOS ? 31 : 15)) /* time stamps for second */ {
 				bcdCheck(dir->lrc, 24, sb->cnotatime ? "creation date" : "access date", "hour", extent, extent2);
 				bcdCheck(dir->extnoh, 60, sb->cnotatime ? "creation date" : "access date", "minute", extent, extent2);
 				bcdCheck(dir->pointers[1], 24, "modification date", "hour", extent, extent2);
@@ -333,7 +334,7 @@ static int fsck(struct cpmInode *root, const char *image) {
 				}
 			}
 
-			if ((s = sb->dir[extent2 = (extent & ~3) + 2].status) >= 0 && s <= (sb->type == CPMFS_P2DOS ? 31 : 15)) /* time stamps for third */ {
+			if ((s = sb->dir[extent2 = (extent & ~3) + 2].status) <= (sb->type == CPMFS_P2DOS ? 31 : 15)) /* time stamps for third */ {
 				bcdCheck(dir->pointers[7], 24, sb->cnotatime ? "creation date" : "access date", "hour", extent, extent2);
 				bcdCheck(dir->pointers[8], 60, sb->cnotatime ? "creation date" : "access date", "minute", extent, extent2);
 				bcdCheck(dir->pointers[11], 24, "modification date", "hour", extent, extent2);
@@ -345,7 +346,7 @@ static int fsck(struct cpmInode *root, const char *image) {
 				}
 			}
 
-		} else if (sb->type == CPMFS_DR3 && *status == 32) /* disc label */ {
+		} else if (sb->type == CPMFS_DR3 && *status == 0x20) /* disc label */ {
 			unsigned long created, modified;
 
 			bcdCheck(dir->pointers[10], 24, sb->cnotatime ? "creation date" : "access date", "hour", extent, extent);
@@ -391,14 +392,14 @@ static int fsck(struct cpmInode *root, const char *image) {
 		} else if (sb->type == CPMFS_DR3 && *status >= 16 && *status <= 31) /* password */ {
 			/* check name and extension */
 			int i;
-			char *c;
+			unsigned char *c;
 
 			for (i = 0; i < 8; ++i) {
-				c = &(dir->name[i]);
+				c = &dir->name[i];
 				if (!ISFILECHAR(i, *c & 0x7f) || islower(*c & 0x7f)) {
 					printf("Error: Bad name (extent=%d, name=\"%s\", position=%d)\n", extent, prfile(sb, extent), i);
 					if (ask("Clear password entry")) {
-						*status = (char)0xE5;
+						*status = 0xE5;
 						ret |= MODIFIED;
 						break;
 					} else {
@@ -406,15 +407,15 @@ static int fsck(struct cpmInode *root, const char *image) {
 					}
 				}
 			}
-			if (*status == (char)0xe5) {
+			if (*status == 0xe5) {
 				continue;
 			}
 			for (i = 0; i < 3; ++i) {
-				c = &(dir->ext[i]);
+				c = &dir->ext[i];
 				if (!ISFILECHAR(1, *c & 0x7f) || islower(*c & 0x7f)) {
 					printf("Error: Bad name (extent=%d, name=\"%s\", position=%d)\n", extent, prfile(sb, extent), i);
 					if (ask("Clear password entry")) {
-						*status = (char)0xE5;
+						*status = 0xE5;
 						ret |= MODIFIED;
 						break;
 					} else {
@@ -422,7 +423,7 @@ static int fsck(struct cpmInode *root, const char *image) {
 					}
 				}
 			}
-			if (*status == (char)0xe5) {
+			if (*status == 0xe5) {
 				continue;
 			}
 
@@ -447,10 +448,10 @@ static int fsck(struct cpmInode *root, const char *image) {
 				}
 			}
 
-		} else if (*status != (char)0xe5) /* bad status */ {
-			printf("Error: Bad status (extent=%d, name=\"%s\", status=0x%02x)\n", extent, prfile(sb, extent), *status & 0xff);
+		} else if (*status != 0xe5) /* bad status */ {
+			printf("Error: Bad status (extent=%d, name=\"%s\", status=0x%02x)\n", extent, prfile(sb, extent), *status);
 			if (ask("Clear entry")) {
-				*status = (char)0xE5;
+				*status = 0xE5;
 				ret |= MODIFIED;
 			} else {
 				ret |= BROKEN;
@@ -464,16 +465,17 @@ static int fsck(struct cpmInode *root, const char *image) {
 	printf("Phase 2: check extent connectivity\n");
 	/* check multiple allocated blocks */
 	for (extent = 0; extent < sb->maxdir; ++extent) {
-		if ((dir = sb->dir + extent)->status >= 0 && dir->status <= (sb->type == CPMFS_P2DOS ? 31 : 15)) {
+		if ((dir = sb->dir + extent)->status <= (sb->type == CPMFS_P2DOS ? 31 : 15)) {
 			int i, j, block, block2;
 
 			for (i = 0; i < 16; ++i) {
-				block = dir->pointers[i] & 0xff;
+				block = dir->pointers[i];
 				if (sb->size > 256) {
-					block += (dir->pointers[++i] & 0xff) << 8;
+					block += (dir->pointers[++i] << 8);
 				}
 				for (extent2 = 0; extent2 < sb->maxdir; ++extent2) {
-					if ((dir2 = sb->dir + extent2)->status >= 0 && dir2->status <= (sb->type == CPMFS_P2DOS ? 31 : 15)) {
+					dir2 = sb->dir + extent2;
+					if (dir2->status <= (sb->type == CPMFS_P2DOS ? 31 : 15)) {
 						for (j = 0; j < 16; ++j) {
 							block2 = dir2->pointers[j] & 0xff;
 							if (sb->size > 256) {
@@ -492,9 +494,11 @@ static int fsck(struct cpmInode *root, const char *image) {
 	}
 	/* check multiple extents */
 	for (extent = 0; extent < sb->maxdir; ++extent) {
-		if ((dir = sb->dir + extent)->status >= 0 && dir->status <= (sb->type == CPMFS_P2DOS ? 31 : 15)) {
+		dir = sb->dir + extent;
+		if (dir->status <= (sb->type == CPMFS_P2DOS ? 31 : 15)) {
 			for (extent2 = 0; extent2 < sb->maxdir; ++extent2) {
-				if ((dir2 = sb->dir + extent2)->status >= 0 && dir2->status <= (sb->type == CPMFS_P2DOS ? 31 : 15)) {
+				dir2 = sb->dir + extent2;
+				if (dir2->status <= (sb->type == CPMFS_P2DOS ? 31 : 15)) {
 					if (extent != extent2 && EXTENT(dir->extnol, dir->extnoh) == EXTENT(dir2->extnol, dir2->extnoh) && dir->status == dir2->status) {
 						int i;
 
@@ -517,13 +521,14 @@ static int fsck(struct cpmInode *root, const char *image) {
 
 		cpmStatFS(root, &statfsbuf);
 		for (extent = 0; extent < sb->maxdir; ++extent) {
-			if ((dir = sb->dir + extent)->status >= 0 && dir->status <= (sb->type == CPMFS_P2DOS ? 31 : 15)) {
+			dir = sb->dir + extent;
+			if (dir->status <= (sb->type == CPMFS_P2DOS ? 31 : 15)) {
 				int i, block, previous = -1;
 
 				for (i = 0; i < 16; ++i) {
-					block = dir->pointers[i] & 0xff;
+					block = dir->pointers[i];
 					if (sb->size > 256) {
-						block += (dir->pointers[++i] & 0xff) << 8;
+						block += (dir->pointers[++i] << 8);
 					}
 					if (previous != -1) {
 						if (block != 0 && block != (previous + 1)) {
@@ -536,7 +541,10 @@ static int fsck(struct cpmInode *root, const char *image) {
 			}
 		}
 		fragmented = (borders ? (1000 * fragmented) / borders : 0);
-		printf("%s: %ld/%ld files (%d.%d%% non-contigous), %ld/%ld blocks\n", image, statfsbuf.f_files - statfsbuf.f_ffree, statfsbuf.f_files, fragmented / 10, fragmented % 10, statfsbuf.f_blocks - statfsbuf.f_bfree, statfsbuf.f_blocks);
+		printf("%s: %ld/%ld files (%d.%d%% non-contigous), %ld/%ld blocks\n",
+			image, statfsbuf.f_files - statfsbuf.f_ffree, statfsbuf.f_files,
+			fragmented / 10, fragmented % 10,
+			statfsbuf.f_blocks - statfsbuf.f_bfree, statfsbuf.f_blocks);
 	}
 
 	return ret;
