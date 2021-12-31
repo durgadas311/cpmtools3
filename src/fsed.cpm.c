@@ -14,7 +14,7 @@
 
 extern char **environ;
 
-static char *mapbuf;
+static unsigned char *mapbuf;
 
 static struct tm *cpmtime(char lday, char hday, char hour, char min) {
 	static struct tm tm;
@@ -154,7 +154,7 @@ static void map(struct cpmSuperBlock *sb) {
 	term_getch();
 }
 
-static void data(struct cpmSuperBlock *sb, const char *buf, unsigned long int pos) {
+static void data(struct cpmSuperBlock *sb, const unsigned char *buf, unsigned long int pos) {
 	int offset = (pos % sb->secLength) & ~0x7f;
 	unsigned int i;
 
@@ -187,7 +187,7 @@ int main(int argc, char *argv[]) {
 	off_t pos;
 	int ch;
 	int reload;
-	char *buf;
+	unsigned char *buf;
 
 
 	/* parse options */
@@ -329,10 +329,10 @@ int main(int argc, char *argv[]) {
 			term_xy(0, 13);
 			term_printf("Entry %3d: ", entry);
 			if /* free or used directory entry */
-			((buf[entrystart] >= 0 && buf[entrystart] <= (drive.type == CPMFS_P2DOS ? 31 : 15)) || buf[entrystart] == (char)0xe5) {
+			(buf[entrystart] <= (drive.type == CPMFS_P2DOS ? 31 : 15) || buf[entrystart] == 0xe5) {
 				int i;
 
-				if (buf[entrystart] == (char)0xe5) {
+				if (buf[entrystart] == 0xe5) {
 					if (offset == 0) {
 						term_reverse(1);
 					}
@@ -342,7 +342,7 @@ int main(int argc, char *argv[]) {
 					term_printf("Directory entry");
 				}
 				term_xy(0, 15);
-				if (buf[entrystart] != (char)0xe5) {
+				if (buf[entrystart] != 0xe5) {
 					term_printf("User: ");
 					if (offset == 0) {
 						term_reverse(1);
@@ -450,10 +450,12 @@ int main(int argc, char *argv[]) {
 					term_reverse(1);
 				}
 				term_printf("Time stamp ");
-				if (buf[entrystart + 12] & 0x10) {
-					term_printf("on create, ");
-				} else {
-					term_printf("not on create, ");
+				if (drive.type != CPMFS_MPM) {
+					if (buf[entrystart + 12] & 0x10) {
+						term_printf("on create, ");
+					} else {
+						term_printf("not on create, ");
+					}
 				}
 				if (buf[entrystart + 12] & 0x20) {
 					term_printf("on modification, ");
@@ -463,7 +465,16 @@ int main(int argc, char *argv[]) {
 				if (buf[entrystart + 12] & 0x40) {
 					term_printf("on access");
 				} else {
-					term_printf("not on access");
+					if (drive.type == CPMFS_MPM) {
+						term_printf("on create");
+					} else {
+						term_printf("not on access");
+					}
+				}
+				if (drive.type == CPMFS_MPM) {
+					if (buf[entrystart + 12] & 0x10) {
+						term_printf("; create XFCBs");
+					}
 				}
 				term_reverse(0);
 				term_xy(0, 18);

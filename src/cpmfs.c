@@ -368,8 +368,8 @@ static int allocBlock(const struct cpmSuperBlock *drive) {
 /*
  * readBlock -- read a (partial) block
  */
-static int readBlock(const struct cpmSuperBlock *d, int blockno, char *buffer,
-						int start, int end) {
+static int readBlock(const struct cpmSuperBlock *d, int blockno,
+				unsigned char *buffer, int start, int end) {
 	int sect, track, counter;
 
 	assert(d);
@@ -416,8 +416,8 @@ static int readBlock(const struct cpmSuperBlock *d, int blockno, char *buffer,
 /*
  * writeBlock -- write a (partial) block
  */
-static int writeBlock(const struct cpmSuperBlock *d, int blockno, char const *buffer,
-						int start, int end) {
+static int writeBlock(const struct cpmSuperBlock *d, int blockno,
+			const unsigned char *buffer, int start, int end) {
 	int sect, track, counter;
 
 	assert(blockno >= 0);
@@ -482,7 +482,7 @@ static int findFreeExtent(const struct cpmSuperBlock *drive) {
 	int i;
 
 	for (i = 0; i < drive->maxdir; ++i) {
-		if (drive->dir[i].status == (char)0xe5) {
+		if (drive->dir[i].status == 0xe5) {
 			return (i);
 		}
 	}
@@ -1003,7 +1003,7 @@ static int amsReadSuper(struct cpmSuperBlock *d, char const *format) {
 	char const *err;
 
 	Device_setGeometry(&d->dev, 512, 9, 40, 0, "pcw180");
-	err = Device_readSector(&d->dev, 0, 0, (char *)boot_sector);
+	err = Device_readSector(&d->dev, 0, 0, boot_sector);
 	if (err) {
 		fprintf(stderr, "%s: Failed to read Amstrad superblock (%s)\n", cmd, err);
 		exit(1);
@@ -1078,7 +1078,7 @@ int cpmCheckDs(struct cpmSuperBlock *sb) {
 	/* Read ds file in its entirety */
 	off = 0;
 	for (i = dsoffset; i < dsoffset + dsblks; i++) {
-		if (readBlock(sb, i, ((char *)sb->ds) + off, 0, -1) == -1) {
+		if (readBlock(sb, i, ((unsigned char *)sb->ds) + off, 0, -1) == -1) {
 			return -1;
 		}
 		off += sb->blksiz;
@@ -1195,7 +1195,7 @@ int cpmReadSuper(struct cpmSuperBlock *d, struct cpmInode *root, char const *for
 		blocks = (d->maxdir * 32 + d->blksiz - 1) / d->blksiz;
 		entry = 0;
 		for (i = 0; i < blocks; ++i) {
-			if (readBlock(d, i, (char *)(d->dir + entry), 0, -1) == -1) {
+			if (readBlock(d, i, (unsigned char *)(d->dir + entry), 0, -1) == -1) {
 				return -1;
 			}
 			entry += (d->blksiz / 32);
@@ -1252,7 +1252,7 @@ int cpmReadSuper(struct cpmSuperBlock *d, struct cpmInode *root, char const *for
 
 		/* disc label */
 		for (i = 0; i < d->maxdir; ++i) {
-			if (d->dir[i].status == (char)0x20) {
+			if (d->dir[i].status == 0x20) {
 				int j;
 
 				/* for CP/M Plus, bit 0x10 is redundant, and
@@ -1341,7 +1341,7 @@ static int syncDs(const struct cpmSuperBlock *sb) {
 
 		off = 0;
 		for (i = dsoffset; i < dsoffset + dsblks; i++) {
-			if (writeBlock(sb, i, ((char *)(sb->ds)) + off, 0, -1) == -1) {
+			if (writeBlock(sb, i, ((unsigned char *)(sb->ds)) + off, 0, -1) == -1) {
 				return -1;
 			}
 			off += sb->blksiz;
@@ -1360,7 +1360,7 @@ int cpmSync(struct cpmSuperBlock *sb) {
 		blocks = (sb->maxdir * 32 + sb->blksiz - 1) / sb->blksiz;
 		entry = 0;
 		for (i = 0; i < blocks; ++i) {
-			if (writeBlock(sb, i, (char *)(sb->dir + entry), 0, -1) == -1) {
+			if (writeBlock(sb, i, (unsigned char *)(sb->dir + entry), 0, -1) == -1) {
 				return -1;
 			}
 			entry += (sb->blksiz / 32);
@@ -1572,7 +1572,7 @@ void cpmStatFS(const struct cpmInode *ino, struct cpmStatFS *buf) {
 	buf->f_files = d->maxdir;
 	buf->f_ffree = 0;
 	for (i = 0; i < d->maxdir; ++i) {
-		if (d->dir[i].status == (char)0xe5) {
+		if (d->dir[i].status == 0xe5) {
 			++buf->f_ffree;
 		}
 	}
@@ -1858,7 +1858,7 @@ ssize_t cpmRead(struct cpmFile *file, char *buf, size_t count) {
 		return count;
 	} else {
 		while (count > 0 && file->pos < file->ino->size) {
-			char buffer[16384];
+			unsigned char buffer[16384];
 
 			if (findext) {
 				extentno = file->pos / 16384;
@@ -1933,7 +1933,7 @@ ssize_t cpmWrite(struct cpmFile *file, char const *buf, size_t count) {
 	int blocksize = file->ino->sb->blksiz;
 	int extcap = (file->ino->sb->size <= 256 ? 16 : 8) * blocksize;
 	int block = -1, start = -1, end = -1, ptr = -1, last = -1;
-	char buffer[16384];
+	unsigned char buffer[16384];
 
 	while (count > 0) {
 		if (findext) {

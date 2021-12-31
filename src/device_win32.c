@@ -454,7 +454,7 @@ const char *Device_close(struct Device *sb) {
 }
 
 /* Device_readSector -- read a physical sector */
-const char *Device_readSector(const struct Device *drive, int track, int sector, char *buf) {
+const char *Device_readSector(const struct Device *drive, int track, int sector, unsigned char *buf) {
 	int res;
 	off_t offset;
 
@@ -555,7 +555,7 @@ const char *Device_readSector(const struct Device *drive, int track, int sector,
 }
 
 /* Device_writeSector -- write physical sector */
-const char *Device_writeSector(const struct Device *drive, int track, int sector, const char *buf) {
+const char *Device_writeSector(const struct Device *drive, int track, int sector, const unsigned char *buf) {
 	off_t offset;
 	int res;
 

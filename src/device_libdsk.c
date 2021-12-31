@@ -109,7 +109,7 @@ const char *Device_close(struct Device *this) {
 /*
  * Device_readSector -- read a physical sector 
  */
-const char *Device_readSector(const struct Device *this, int track, int sector, char *buf) {
+const char *Device_readSector(const struct Device *this, int track, int sector, unsigned char *buf) {
 	dsk_err_t e;
 	e = dsk_lread(this->dev, &this->geom, buf, (track * this->sectrk) + sector + this->offset / this->secLength);
 	return (e ? dsk_strerror(e) : NULL);
@@ -118,7 +118,7 @@ const char *Device_readSector(const struct Device *this, int track, int sector, 
 /*
  * Device_writeSector -- write physical sector 
  */
-const char *Device_writeSector(const struct Device *this, int track, int sector, const char *buf) {
+const char *Device_writeSector(const struct Device *this, int track, int sector, const unsigned char *buf) {
 	dsk_err_t e;
 	e = dsk_lwrite(this->dev, &this->geom, buf, (track * this->sectrk) + sector + this->offset / this->secLength);
 	return (e ? dsk_strerror(e) : NULL);

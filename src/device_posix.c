@@ -42,7 +42,7 @@ const char *Device_close(struct Device *this) {
 /*
  * Device_readSector -- read a physical sector 
  */
-const char *Device_readSector(const struct Device *this, int track, int sector, char *buf) {
+const char *Device_readSector(const struct Device *this, int track, int sector, unsigned char *buf) {
 	int res;
 
 	assert(this);
@@ -69,7 +69,7 @@ const char *Device_readSector(const struct Device *this, int track, int sector, 
 /*
  * Device_writeSector -- write physical sector 
  */
-const char *Device_writeSector(const struct Device *this, int track, int sector, const char *buf) {
+const char *Device_writeSector(const struct Device *this, int track, int sector, const unsigned char *buf) {
 	assert(sector >= 0);
 	assert(sector < this->sectrk);
 	assert(track >= 0);

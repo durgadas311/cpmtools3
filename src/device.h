@@ -29,7 +29,7 @@ struct Device {
 const char *Device_open(struct Device *self, const char *filename, int mode, const char *deviceOpts);
 const char *Device_setGeometry(struct Device *self, int secLength, int sectrk, int tracks, off_t offset, const char *libdskGeometry);
 const char *Device_close(struct Device *self);
-const char *Device_readSector(const struct Device *self, int track, int sector, char *buf);
-const char *Device_writeSector(const struct Device *self, int track, int sector, const char *buf);
+const char *Device_readSector(const struct Device *self, int track, int sector, unsigned char *buf);
+const char *Device_writeSector(const struct Device *self, int track, int sector, const unsigned char *buf);
 
 #endif
