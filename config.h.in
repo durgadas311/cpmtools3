@@ -1,71 +1,123 @@
+/* config.h.in.  Generated from configure.ac by autoheader.  */
+
+/* Define to 1 if you have the `alarm' function. */
+#undef HAVE_ALARM
+
+/* Define to 1 if you have the <fcntl.h> header file. */
 #undef HAVE_FCNTL_H
-#ifdef HAVE_FCNTL_H
-#include <fcntl.h>
-#endif
 
+/* Define to 1 if you have the <inttypes.h> header file. */
+#undef HAVE_INTTYPES_H
+
+/* Define to 1 if you have the <libintl.h> header file. */
+#undef HAVE_LIBINTL_H
+
+/* Define to 1 if you have the <limits.h> header file. */
 #undef HAVE_LIMITS_H
-#ifdef HAVE_LIMITS_H
-#include <limits.h>
-#endif
 
-#undef HAVE_UNISTD_H
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
+/* Define to 1 if your system has a GNU libc compatible `malloc' function, and
+   to 0 otherwise. */
+#undef HAVE_MALLOC
 
-#undef HAVE_WINDOWS_H
-#ifdef HAVE_WINDOWS_H
-#include <windows.h>
-#endif
+/* Define to 1 if you have the <memory.h> header file. */
+#undef HAVE_MEMORY_H
 
-#undef HAVE_WINIOCTL_H
-#ifdef HAVE_WINIOCTL_H
-#include <winioctl.h>
-#endif
+/* Define to 1 if you have the `memset' function. */
+#undef HAVE_MEMSET
 
-#undef HAVE_LIBDSK_H
-#ifdef HAVE_LIBDSK_H
-#include <libdsk.h>
-#endif
+/* Define to 1 if your system has a GNU libc compatible `realloc' function,
+   and to 0 otherwise. */
+#undef HAVE_REALLOC
 
-#undef HAVE_SYS_TYPES_H
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
+/* Define to 1 if you have the <stdint.h> header file. */
+#undef HAVE_STDINT_H
 
+/* Define to 1 if you have the <stdlib.h> header file. */
+#undef HAVE_STDLIB_H
+
+/* Define to 1 if you have the `strchr' function. */
+#undef HAVE_STRCHR
+
+/* Define to 1 if you have the `strerror' function. */
+#undef HAVE_STRERROR
+
+/* Define to 1 if you have the <strings.h> header file. */
+#undef HAVE_STRINGS_H
+
+/* Define to 1 if you have the <string.h> header file. */
+#undef HAVE_STRING_H
+
+/* Define to 1 if you have the `strrchr' function. */
+#undef HAVE_STRRCHR
+
+/* Define to 1 if you have the `strtol' function. */
+#undef HAVE_STRTOL
+
+/* Define to 1 if you have the <sys/stat.h> header file. */
 #undef HAVE_SYS_STAT_H
-#ifdef HAVE_SYS_STAT_H
-#include <sys/stat.h>
-#endif
 
-#undef HAVE_SYS_UTIME_H
-#ifdef HAVE_SYS_UTIME_H
-#include <sys/utime.h>
-#endif
+/* Define to 1 if you have the <sys/time.h> header file. */
+#undef HAVE_SYS_TIME_H
 
+/* Define to 1 if you have the <sys/types.h> header file. */
+#undef HAVE_SYS_TYPES_H
+
+/* Define to 1 if you have the <unistd.h> header file. */
+#undef HAVE_UNISTD_H
+
+/* Define to 1 if you have the `utime' function. */
+#undef HAVE_UTIME
+
+/* Define to 1 if you have the <utime.h> header file. */
 #undef HAVE_UTIME_H
-#ifdef HAVE_UTIME_H
-#include <utime.h>
+
+/* Define to 1 if you have the <wchar.h> header file. */
+#undef HAVE_WCHAR_H
+
+/* Define to the address where bug reports for this package should be sent. */
+#undef PACKAGE_BUGREPORT
+
+/* Define to the full name of this package. */
+#undef PACKAGE_NAME
+
+/* Define to the full name and version of this package. */
+#undef PACKAGE_STRING
+
+/* Define to the one symbol short name of this package. */
+#undef PACKAGE_TARNAME
+
+/* Define to the home page for this package. */
+#undef PACKAGE_URL
+
+/* Define to the version of this package. */
+#undef PACKAGE_VERSION
+
+/* Define to 1 if you have the ANSI C header files. */
+#undef STDC_HEADERS
+
+/* Define to 1 if you can safely include both <sys/time.h> and <time.h>. */
+#undef TIME_WITH_SYS_TIME
+
+/* Define to `__inline__' or `__inline' if that's what the C compiler
+   calls it, or to nothing if 'inline' is not supported under any name.  */
+#ifndef __cplusplus
+#undef inline
 #endif
 
-#undef NEED_NCURSES
-#undef HAVE_NCURSES_NCURSES_H
+/* Define to rpl_malloc if the replacement function should be used. */
+#undef malloc
 
-/* Define either for large file support, if your OS needs them. */
-#undef _FILE_OFFSET_BITS
-#undef _LARGE_FILES
+/* Define to `int' if <sys/types.h> does not define. */
+#undef mode_t
 
-#ifndef _POSIX_PATH_MAX
-#define _POSIX_PATH_MAX _MAX_PATH
-#endif
+/* Define to `long int' if <sys/types.h> does not define. */
+#undef off_t
 
-/* There is not standard header for this, yet it is needed for
- * timezone changes.
- */
-#ifndef environ
-extern char **environ;
-#endif
+/* Define to rpl_realloc if the replacement function should be used. */
+#undef realloc
 
-/* If types are missing, the script defines.awk contained
- * in configure.status should create definitions here.
- */
+/* Define to `unsigned int' if <sys/types.h> does not define. */
+#undef size_t
+
+/* Define to `int' if <sys/types.h> does not define. */
+#undef ssize_t
