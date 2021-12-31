@@ -40,6 +40,8 @@ Output the creation time, not the modification time.
 Print index number of each file.
 .IP "\fB\-u\fP"
 Show all CP/M file names in upper case.
+.IP "\fB\-U\fP"
+Do not sort file names.
 .\"}}}
 .SH "RETURN VALUE" \"{{{
 Upon successful completion, exit code 0 is returned.

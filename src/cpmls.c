@@ -42,7 +42,7 @@ static int onlyuser0(char **const dirent, int entries) {
 /*
  * olddir  -- old style output 
  */
-static void olddir(struct cpmSuperBlock *sb, char **dirent, int entries) {
+static void olddir(struct cpmSuperBlock *sb, char **dirent, int entries, int unsorted) {
 	int i, j, k, l, user, announce, showuser, files;
 	int maxu = (sb->type & CPMFS_HAS_XFCBS ? 16 : 32);
 
@@ -116,7 +116,7 @@ static void printtime2(time_t ts) {
 /*
  * oldddir -- old style long output 
  */
-static void oldddir(struct cpmSuperBlock *sb, char **dirent, int entries, struct cpmInode *ino) {
+static void oldddir(struct cpmSuperBlock *sb, char **dirent, int entries, struct cpmInode *ino, int unsorted) {
 	struct cpmStatFS buf;
 	struct cpmStat statbuf;
 	struct cpmInode file;
@@ -125,7 +125,9 @@ static void oldddir(struct cpmSuperBlock *sb, char **dirent, int entries, struct
 	if (entries > 2) {
 		int i, j, k, l, announce, user;
 
-		qsort(dirent, entries, sizeof(char *), namecmp);
+		if (!unsorted) {
+			qsort(dirent, entries, sizeof(char *), namecmp);
+		}
 		cpmStatFS(ino, &buf);
 		printf("     Name    Bytes   Recs  Attr     update             create\n");
 		printf("------------ ------ ------ ---- -----------------  -----------------\n");
@@ -195,7 +197,7 @@ static void oldddir(struct cpmSuperBlock *sb, char **dirent, int entries, struct
 /*
  * old3dir -- old CP/M Plus style long output 
  */
-static void old3dir(struct cpmSuperBlock *sb, char **dirent, int entries, struct cpmInode *ino) {
+static void old3dir(struct cpmSuperBlock *sb, char **dirent, int entries, struct cpmInode *ino, int unsorted) {
 	struct cpmStatFS buf;
 	struct cpmStat statbuf;
 	struct cpmInode file;
@@ -205,7 +207,9 @@ static void old3dir(struct cpmSuperBlock *sb, char **dirent, int entries, struct
 		int i, j, k, l, announce, user, attrib;
 		int totalBytes = 0, totalRecs = 0;
 
-		qsort(dirent, entries, sizeof(char *), namecmp);
+		if (!unsorted) {
+			qsort(dirent, entries, sizeof(char *), namecmp);
+		}
 		cpmStatFS(ino, &buf);
 		announce = 1;
 		for (l = 0, user = 0; user < maxu; ++user) {
@@ -300,7 +304,7 @@ static void old3dir(struct cpmSuperBlock *sb, char **dirent, int entries, struct
  * ls -- UNIX style output 
  */
 static void ls(struct cpmSuperBlock *sb, char **dirent, int entries, struct cpmInode *ino,
-			int l, int c, int iflag) {
+			int l, int c, int iflag, int unsorted) {
 	int i, user, announce, any;
 	time_t now;
 	struct cpmStat statbuf;
@@ -308,7 +312,9 @@ static void ls(struct cpmSuperBlock *sb, char **dirent, int entries, struct cpmI
 	int maxu = (sb->type & CPMFS_HAS_XFCBS ? 16 : 32);
 
 	time(&now);
-	qsort(dirent, entries, sizeof(char *), namecmp);
+	if (!unsorted) {
+		qsort(dirent, entries, sizeof(char *), namecmp);
+	}
 	announce = 0;
 	any = 0;
 	for (user = 0; user < maxu; ++user) {
@@ -370,14 +376,16 @@ static void ls(struct cpmSuperBlock *sb, char **dirent, int entries, struct cpmI
 /*
  * lsattr  -- output something like e2fs lsattr 
  */
-static void lsattr(struct cpmSuperBlock *sb, char **dirent, int entries, struct cpmInode *ino) {
+static void lsattr(struct cpmSuperBlock *sb, char **dirent, int entries, struct cpmInode *ino, int unsorted) {
 	int i, user, announce, any;
 	struct cpmStat statbuf;
 	struct cpmInode file;
 	cpm_attr_t attrib;
 	int maxu = (sb->type & CPMFS_HAS_XFCBS ? 16 : 32);
 
-	qsort(dirent, entries, sizeof(char *), namecmp);
+	if (!unsorted) {
+		qsort(dirent, entries, sizeof(char *), namecmp);
+	}
 	announce = 0;
 	any = 0;
 	/* TODO: don't show XFCBS... or augment w/XFCB data? */
@@ -431,6 +439,7 @@ int main(int argc, char *argv[]) {
 	int style = 0;
 	int changetime = 0;
 	int uppercase = 0;
+	int unsorted = 0;
 	int inode = 0;
 	char **gargv;
 	int gargc;
@@ -440,7 +449,7 @@ int main(int argc, char *argv[]) {
 	if (!(format = getenv("CPMTOOLSFMT"))) {
 		format = FORMAT;
 	}
-	while ((c = getopt(argc, argv, "cT:f:ih?dDFlAu")) != EOF) {
+	while ((c = getopt(argc, argv, "cT:f:ih?dDFlAuU")) != EOF) {
 		switch (c) {
 		case 'f':
 			format = optarg;
@@ -476,6 +485,9 @@ int main(int argc, char *argv[]) {
 		case 'u':
 			uppercase = 1;
 			break;
+		case 'U':
+			unsorted = 1;
+			break;
 		}
 	}
 	if (optind == argc) {
@@ -509,15 +521,15 @@ int main(int argc, char *argv[]) {
 		cpmglob(0, 1, star, &root, &gargc, &gargv);
 	}
 	if (style == 1) {
-		olddir(&super, gargv, gargc);
+		olddir(&super, gargv, gargc, unsorted);
 	} else if (style == 2) {
-		oldddir(&super, gargv, gargc, &root);
+		oldddir(&super, gargv, gargc, &root, unsorted);
 	} else if (style == 3) {
-		old3dir(&super, gargv, gargc, &root);
+		old3dir(&super, gargv, gargc, &root, unsorted);
 	} else if (style == 5) {
-		lsattr(&super, gargv, gargc, &root);
+		lsattr(&super, gargv, gargc, &root, unsorted);
 	} else {
-		ls(&super, gargv, gargc, &root, style == 4, changetime, inode);
+		ls(&super, gargv, gargc, &root, style == 4, changetime, inode, unsorted);
 	}
 	cpmglobfree(gargv, gargc);
 	cpmUmount(&super);
