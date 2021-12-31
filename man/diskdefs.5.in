@@ -24,7 +24,7 @@ A diskdefs file consists of one or more entries of the format:
   \fBboottrk\fP \fInumber\fP
   [\fBskew\fP \fInumber\fP]
   [\fBskewtab\fP \fIsector\fP[\fB,\fP\fIsector\fP]...]
-  [\fBos\fP \fB2.2\fP|\fB3\fP|\fBisx\fP|\fBp2dos\fP|\fBzsys\fP]
+  [\fBos\fP \fB2.2\fP|\fB3\fP|\fBmpm\fP|\fBisx\fP|\fBp2dos\fP|\fBzsys\fP]
   [\fBoffset\fP \fIsize\fP]
   [\fBlogicalextents\fP \fIcount\fP]
   [\fBlibdsk:format\fP \fIname\fP]
