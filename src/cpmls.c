@@ -121,72 +121,77 @@ static void oldddir(struct cpmSuperBlock *sb, char **dirent, int entries, struct
 	struct cpmStat statbuf;
 	struct cpmInode file;
 	int maxu = (sb->type & CPMFS_HAS_XFCBS ? 16 : 32);
+	int count = 0;
+	int i, j, k, l, announce, user;
 
-	if (entries > 2) {
-		int i, j, k, l, announce, user;
-
-		if (!unsorted) {
-			qsort(dirent, entries, sizeof(char *), namecmp);
-		}
-		cpmStatFS(ino, &buf);
-		printf("     Name    Bytes   Recs  Attr     update             create\n");
-		printf("------------ ------ ------ ---- -----------------  -----------------\n");
-		announce = 0;
-		for (l = user = 0; user < maxu; ++user) {
-			int u10 = '0' + user / 10;
-			int u1 = '0' + user % 10;
-			for (i = 0; i < entries; ++i) {
-				if (dirent[i][0] == u10 && dirent[i][1] == u1) {
-					if (announce == 1) {
-						printf("\nUser %d:\n\n", user);
-						printf("     Name    Bytes   Recs  Attr     update             create\n");
-						printf("------------ ------ ------ ---- -----------------  -----------------\n");
-					}
-					announce = 2;
-					for (j = 2; dirent[i][j] && dirent[i][j] != '.'; ++j) {
-						putchar(toupper(dirent[i][j]));
-					}
-					k = j;
-					while (k < 10) {
-						putchar(' ');
-						++k;
-					}
-					putchar('.');
-					if (dirent[i][j] == '.') {
-						++j;
-					}
-					for (k = 0; dirent[i][j]; ++j, ++k) {
-						putchar(toupper(dirent[i][j]));
-					}
-					for (; k < 3; ++k) {
-						putchar(' ');
-					}
-
-					cpmNamei(ino, dirent[i], &file);
-					cpmStat(&file, &statbuf);
-					printf(" %5.1ldK", (long)(statbuf.size + buf.f_bsize - 1) /
-						buf.f_bsize * (buf.f_bsize / 1024));
-
-					printf(" %6.1ld ", (long)(statbuf.size / 128));
-					putchar(statbuf.mode & 0200 ? ' ' : 'R');
-					putchar(statbuf.mode & 01000 ? 'S' : ' ');
-					putchar(' ');
-					if (statbuf.mtime) {
-						printtime4(statbuf.mtime);
-					} else if (statbuf.ctime) {
-						printf("                   ");
-					}
-					if (statbuf.ctime) {
-						printtime4(statbuf.ctime);
-					}
-					putchar('\n');
-					++l;
+	if (!unsorted) {
+		qsort(dirent, entries, sizeof(char *), namecmp);
+	}
+	cpmStatFS(ino, &buf);
+	announce = 0;
+	for (l = user = 0; user < maxu; ++user) {
+		int u10 = '0' + user / 10;
+		int u1 = '0' + user % 10;
+		for (i = 0; i < entries; ++i) {
+			if (dirent[i][0] == u10 && dirent[i][1] == u1) {
+				if (!count) {
+					printf("     Name    Bytes   Recs  Attr "
+						"    update             create\n");
+					printf("------------ ------ ------ ---- "
+						"-----------------  -----------------\n");
 				}
-			}
-			if (announce == 2) {
-				announce = 1;
+				++count;
+				if (announce == 1) {
+					printf("\nUser %d:\n\n", user);
+					printf("     Name    Bytes   Recs  Attr     update             create\n");
+					printf("------------ ------ ------ ---- -----------------  -----------------\n");
+				}
+				announce = 2;
+				for (j = 2; dirent[i][j] && dirent[i][j] != '.'; ++j) {
+					putchar(toupper(dirent[i][j]));
+				}
+				k = j;
+				while (k < 10) {
+					putchar(' ');
+					++k;
+				}
+				putchar('.');
+				if (dirent[i][j] == '.') {
+					++j;
+				}
+				for (k = 0; dirent[i][j]; ++j, ++k) {
+					putchar(toupper(dirent[i][j]));
+				}
+				for (; k < 3; ++k) {
+					putchar(' ');
+				}
+
+				cpmNamei(ino, dirent[i], &file);
+				cpmStat(&file, &statbuf);
+				printf(" %5.1ldK", (long)(statbuf.size + buf.f_bsize - 1) /
+					buf.f_bsize * (buf.f_bsize / 1024));
+
+				printf(" %6.1ld ", (long)(statbuf.size / 128));
+				putchar(statbuf.mode & 0200 ? ' ' : 'R');
+				putchar(statbuf.mode & 01000 ? 'S' : ' ');
+				putchar(' ');
+				if (statbuf.mtime) {
+					printtime4(statbuf.mtime);
+				} else if (statbuf.ctime) {
+					printf("                   ");
+				}
+				if (statbuf.ctime) {
+					printtime4(statbuf.ctime);
+				}
+				putchar('\n');
+				++l;
 			}
 		}
+		if (announce == 2) {
+			announce = 1;
+		}
+	}
+	if (count) {
 		printf("%5.1d Files occupying %6.1ldK", l, (buf.f_bused * buf.f_bsize) / 1024);
 		printf(", %7.1ldK Free.\n", (buf.f_bfree * buf.f_bsize) / 1024);
 	} else {
@@ -202,99 +207,100 @@ static void old3dir(struct cpmSuperBlock *sb, char **dirent, int entries, struct
 	struct cpmStat statbuf;
 	struct cpmInode file;
 	int maxu = (sb->type & CPMFS_HAS_XFCBS ? 16 : 32);
+	int count = 0;
+	int i, j, k, l, announce, user, attrib;
+	int totalBytes = 0, totalRecs = 0;
 
-	if (entries > 2) {
-		int i, j, k, l, announce, user, attrib;
-		int totalBytes = 0, totalRecs = 0;
-
-		if (!unsorted) {
-			qsort(dirent, entries, sizeof(char *), namecmp);
-		}
-		cpmStatFS(ino, &buf);
-		announce = 1;
-		for (l = 0, user = 0; user < maxu; ++user) {
-			int u10 = '0' + user / 10;
-			int u1 = '0' + user % 10;
-			for (i = 0; i < entries; ++i) {
-				if (dirent[i][0] == u10 && dirent[i][1] == u1) {
-					cpmNamei(ino, dirent[i], &file);
-					cpmStat(&file, &statbuf);
-					cpmAttrGet(&file, &attrib);
-					if (announce == 1) {
-						if (user) {
-							putchar('\n');
-						}
-						printf("Directory For Drive A:  User %2.1d\n\n", user);
-						printf("    Name     Bytes   Recs   Attributes   Prot      Update          %s\n",
-							ino->sb->cnotatime ? "Create" : "Access");
-						printf("------------ ------ ------ ------------ ------ --------------  --------------\n\n");
+	if (!unsorted) {
+		qsort(dirent, entries, sizeof(char *), namecmp);
+	}
+	cpmStatFS(ino, &buf);
+	announce = 1;
+	for (l = 0, user = 0; user < maxu; ++user) {
+		int u10 = '0' + user / 10;
+		int u1 = '0' + user % 10;
+		for (i = 0; i < entries; ++i) {
+			if (dirent[i][0] == u10 && dirent[i][1] == u1) {
+				++count;
+				cpmNamei(ino, dirent[i], &file);
+				cpmStat(&file, &statbuf);
+				cpmAttrGet(&file, &attrib);
+				if (announce == 1) {
+					if (user) {
+						putchar('\n');
 					}
-					announce = 2;
-					for (j = 2; dirent[i][j] && dirent[i][j] != '.'; ++j) {
-						putchar(toupper(dirent[i][j]));
-					}
-					k = j;
-					while (k < 10) {
-						putchar(' ');
-						++k;
-					}
-					putchar(' ');
-					if (dirent[i][j] == '.') {
-						++j;
-					}
-					for (k = 0; dirent[i][j]; ++j, ++k) {
-						putchar(toupper(dirent[i][j]));
-					}
-					for (; k < 3; ++k) {
-						putchar(' ');
-					}
-
-					totalBytes += statbuf.size;
-					totalRecs += (statbuf.size + 127) / 128;
-					printf(" %5.1ldk", (long) (statbuf.size + buf.f_bsize - 1) /
-						buf.f_bsize * (buf.f_bsize / 1024));
-					printf(" %6.1ld ", (long)((statbuf.size + 127) / 128));
-					putchar((attrib & CPM_ATTR_F1)   ? '1' : ' ');
-					putchar((attrib & CPM_ATTR_F2)   ? '2' : ' ');
-					putchar((attrib & CPM_ATTR_F3)   ? '3' : ' ');
-					putchar((attrib & CPM_ATTR_F4)   ? '4' : ' ');
-					putchar((statbuf.mode & (S_IWUSR | S_IWGRP | S_IWOTH)) ? ' ' : 'R');
-					putchar((attrib & CPM_ATTR_SYS)  ? 'S' : ' ');
-					putchar((attrib & CPM_ATTR_ARCV) ? 'A' : ' ');
-					printf("      ");
-					if      (attrib & CPM_ATTR_PWREAD) {
-						printf("Read   ");
-					} else if (attrib & CPM_ATTR_PWWRITE) {
-						printf("Write  ");
-					} else if (attrib & CPM_ATTR_PWDEL) {
-						printf("Delete ");
-					} else {
-						printf("None   ");
-					}
-					if (statbuf.mtime) {
-						printtime2(statbuf.mtime);
-					} else {
-						printf("                ");
-					}
-					if (ino->sb->cnotatime && statbuf.ctime) {
-						printtime2(statbuf.ctime);
-					} else if (!ino->sb->cnotatime && statbuf.atime) {
-						printtime2(statbuf.atime);
-					}
-					putchar('\n');
-					++l;
+					printf("Directory For Drive A:  User %2.1d\n\n", user);
+					printf("    Name     Bytes   Recs   Attributes   Prot      Update          %s\n",
+						ino->sb->cnotatime ? "Create" : "Access");
+					printf("------------ ------ ------ ------------ ------ --------------  --------------\n\n");
 				}
-			}
-			if (announce == 2) {
-				announce = 1;
+				announce = 2;
+				for (j = 2; dirent[i][j] && dirent[i][j] != '.'; ++j) {
+					putchar(toupper(dirent[i][j]));
+				}
+				k = j;
+				while (k < 10) {
+					putchar(' ');
+					++k;
+				}
+				putchar(' ');
+				if (dirent[i][j] == '.') {
+					++j;
+				}
+				for (k = 0; dirent[i][j]; ++j, ++k) {
+					putchar(toupper(dirent[i][j]));
+				}
+				for (; k < 3; ++k) {
+					putchar(' ');
+				}
+
+				totalBytes += statbuf.size;
+				totalRecs += (statbuf.size + 127) / 128;
+				printf(" %5.1ldk", (long) (statbuf.size + buf.f_bsize - 1) /
+					buf.f_bsize * (buf.f_bsize / 1024));
+				printf(" %6.1ld ", (long)((statbuf.size + 127) / 128));
+				putchar((attrib & CPM_ATTR_F1)   ? '1' : ' ');
+				putchar((attrib & CPM_ATTR_F2)   ? '2' : ' ');
+				putchar((attrib & CPM_ATTR_F3)   ? '3' : ' ');
+				putchar((attrib & CPM_ATTR_F4)   ? '4' : ' ');
+				putchar((statbuf.mode & (S_IWUSR | S_IWGRP | S_IWOTH)) ? ' ' : 'R');
+				putchar((attrib & CPM_ATTR_SYS)  ? 'S' : ' ');
+				putchar((attrib & CPM_ATTR_ARCV) ? 'A' : ' ');
+				printf("      ");
+				if      (attrib & CPM_ATTR_PWREAD) {
+					printf("Read   ");
+				} else if (attrib & CPM_ATTR_PWWRITE) {
+					printf("Write  ");
+				} else if (attrib & CPM_ATTR_PWDEL) {
+					printf("Delete ");
+				} else {
+					printf("None   ");
+				}
+				if (statbuf.mtime) {
+					printtime2(statbuf.mtime);
+				} else {
+					printf("                ");
+				}
+				if (ino->sb->cnotatime && statbuf.ctime) {
+					printtime2(statbuf.ctime);
+				} else if (!ino->sb->cnotatime && statbuf.atime) {
+					printtime2(statbuf.atime);
+				}
+				putchar('\n');
+				++l;
 			}
 		}
+		if (announce == 2) {
+			announce = 1;
+		}
+	}
+	if (count) {
 		printf("\nTotal Bytes     = %6.1dk  ", (totalBytes + 1023) / 1024);
 		printf("Total Records = %7.1d  ", totalRecs);
 		printf("Files Found = %4.1d\n", l);
 		printf("Total 1k Blocks = %6.1ld   ", (buf.f_bused * buf.f_bsize) / 1024);
 		printf("Used/Max Dir Entries For Drive A: %4.1ld/%4.1ld\n",
-				buf.f_files - buf.f_ffree, buf.f_files);
+			buf.f_files - buf.f_ffree, buf.f_files);
 	} else {
 		printf("No files found\n");
 	}
