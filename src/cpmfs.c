@@ -756,8 +756,11 @@ void cpmglob(int optin, int argc, char *const argv[], struct cpmInode *root,
 void cpmglobfree(char **dirent, int entries) {
 	int d;
 
+	if (!entries) {
+		return;
+	}
 	assert(dirent);
-	assert(entries >= 0);
+	assert(entries > 0);
 	for (d = 0; d < entries; ++d) {
 		free(dirent[d]);
 	}
