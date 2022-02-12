@@ -1943,3 +1943,29 @@ diskdef HP25
   boottrk 3
   os 2.2
 end
+
+# OH development system - 8" DSHD
+diskdef oh180
+  seclen 128
+  tracks 160
+  sectrk 48
+  blocksize 2048
+  maxdir 128
+  skew 9
+  boottrk 2
+  os 2.2
+end
+
+# Xerox 820 CP/M - early 8" format
+diskdef xerox820
+  seclen 128
+  tracks 77
+  sectrk 26
+  blocksize 1024
+  maxdir 64
+  #skewtab 0,6,12,18,24,4,10,16,22,2,8,14,20,1,7,13,19,25,5,11,17,23,3,9,15,21
+  skew 6
+  boottrk 0
+  offset 5888
+  os 2.2
+end
