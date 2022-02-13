@@ -1124,7 +1124,9 @@ int cpmReadSuper(struct cpmSuperBlock *d, struct cpmInode *root, char const *for
 	if (strcmp(format, "amstrad") == 0) {
 		amsReadSuper(d, format);
 	} else if (strncmp(format, "auto", 4) == 0) {
-		autoReadSuper(d, format);
+		if (autoReadSuper(d, format) < 0) {
+			return -1;
+		}
 	} else {
 		diskdefReadSuper(d, format);
 	}
