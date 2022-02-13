@@ -1125,6 +1125,7 @@ int cpmReadSuper(struct cpmSuperBlock *d, struct cpmInode *root, char const *for
 		amsReadSuper(d, format);
 	} else if (strncmp(format, "auto", 4) == 0) {
 		if (autoReadSuper(d, format) < 0) {
+			boo = "failed to auto-detect";
 			return -1;
 		}
 	} else {
