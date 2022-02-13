@@ -846,7 +846,7 @@ diskdef mordsdd
   maxdir 128
   skew 3
   boottrk 2
-  OS 2.2
+  os 2.2
 end
 
 
@@ -956,7 +956,7 @@ diskdef trsi         #= TRS-80 Model 4,4P Montezuma System 350K - DSDD 48 tpi 5.
   boottrk 2          #= OFS = 2
 #                    #= 2, 2.2, or 3 (NO comment on next line)
   os 2.2
-#end
+end
 
 diskdef trsj         #= TRS-80 Model 4,4P Montezuma Data 400K - DSDD 48 tpi 5.25"
   seclen 512         #= Sectors xx,512
@@ -1175,8 +1175,8 @@ diskdef trse
   sectrk 8
   blocksize 2048
   maxdir 128
-  datarate DD
-  fm NO
+# datarate DD
+# fm NO
   skew 3
   boottrk 0
   offset 11520
@@ -1187,7 +1187,7 @@ end
 diskdef trsf
   seclen 1024
   tracks 154
-  sides alt
+# sides alt
   sectrk 8
   blocksize 2048
   maxdir 192
@@ -1784,12 +1784,12 @@ end
 diskdef all1         #= Allen-Bradley Advisor+ - DSDD 3.5"
   seclen 512         #= Sectors xx,512
   tracks 160         #= (Cylinders * Sides) = 80*2 = 160
-  sides alt          #= Order of Cylinders  = alt, outout, outback
+# sides alt          #= Order of Cylinders  = alt, outout, outback
   sectrk 8           #= Sectors 8,xxx
   blocksize 2048     #= (128*(BLM+1)) =  7=1024, 15=2048, 31=4096, 63=8192
   maxdir 128         #= (DRM+1) = 128
-  datarate DD        #= DENSITY SD, DD, HD, or ED
-  FM NO              #= Format YES = FM, or NO = MFM
+# datarate DD        #= DENSITY SD, DD, HD, or ED
+# FM NO              #= Format YES = FM, or NO = MFM
   skew 0             #= [0..8] try x
   boottrk 1          #= OFS = 1
 #                    #= 2, 2.2, or 3 (NO comment on next line)
