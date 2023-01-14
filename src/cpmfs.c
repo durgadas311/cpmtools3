@@ -1937,9 +1937,14 @@ ssize_t cpmRead(struct cpmFile *file, char *buf, size_t count) {
 ssize_t cpmWrite(struct cpmFile *file, char const *buf, size_t count) {
 	int findext = 1, findblock = -1, extent = -1, extentno = -1, got = 0, nextblockpos = -1, nextextpos = -1;
 	int blocksize = file->ino->sb->blksiz;
-	int extcap = (file->ino->sb->size <= 256 ? 16 : 8) * blocksize;
+	int extcap;
 	int block = -1, start = -1, end = -1, ptr = -1, last = -1;
 	unsigned char buffer[16384];
+
+	extcap = (file->ino->sb->size <= 256 ? 16 : 8) * blocksize;
+	if (extcap > 16384) {
+		extcap = 16384 * file->ino->sb->extents;
+	}
 
 	while (count > 0) {
 		if (findext) {
