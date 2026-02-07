@@ -108,6 +108,8 @@ static int mkfs(struct cpmSuperBlock *drive, const char *name, const char *forma
 		unsigned int records;
 		struct dsDate *ds;
 		struct cpmSuperBlock super;
+		struct cpmFile file;
+		unsigned int bufsize;
 		const char *err;
 
 		err = Device_open(&super.dev, name, O_RDWR, NULL);
@@ -133,13 +135,25 @@ static int mkfs(struct cpmSuperBlock *drive, const char *name, const char *forma
 			offset += 16;
 		}
 
-		/* Set things up so cpmSync will generate checksums and write the
-		 * file.
-		 */
-		if (cpmCreat(&root, "00!!!TIME&.DAT", &ino, 0) == -1) {
+		if (cpmCreat(&root, "00!!!TIME&.DAT", &ino, 0660) == -1) {
 			fprintf(stderr, "%s: Unable to create DateStamper file: %s\n", cmd, boo);
 			return -1;
 		}
+		/* Must pre-allocate the DS file! */
+		cpmOpen(&ino, &file, O_WRONLY);
+		bufsize = records * 128;
+		if (cpmWrite(&file, (char *)ds, bufsize) != bufsize) {
+			fprintf(stderr,"%s: Can not write DateStamper file: %s\n", cmd, boo);
+			return -1;
+		}
+		if (cpmClose(&file) == EOF) {
+			fprintf(stderr,"%s: can not close DateStamper file: %s\n", cmd, boo);
+			return -1;
+		}
+		/* Need to ensure that superblock umount knows to call syncDs. We
+		 * rely on it to generate the initial checksums
+		 */
+		root.sb->type |= CPMFS_DS_DATES;
 		root.sb->ds = ds;
 		root.sb->dirtyDs = 1;
 		cpmUmount(&super);
